@@ -70,6 +70,31 @@ async function seed() {
 
     const currentYear = parseInt(process.env.CURRENT_YEAR) || 2026;
 
+    // Pro-rata calculation function for probation employees
+    function calculateProRataEntitlement(defaultDays, joinDate, probationMonths = 3) {
+      const join = new Date(joinDate);
+      const yearEnd = new Date(currentYear, 11, 31); // Dec 31
+
+      // Calculate when probation ends
+      const probationEndDate = new Date(join);
+      probationEndDate.setMonth(probationEndDate.getMonth() + probationMonths);
+
+      // If probation ends after year end, no entitlement for this year
+      if (probationEndDate > yearEnd) {
+        return 0;
+      }
+
+      // Calculate remaining months from probation end to year end
+      const remainingMonths = (yearEnd.getMonth() - probationEndDate.getMonth()) +
+                              (yearEnd.getFullYear() - probationEndDate.getFullYear()) * 12 + 1;
+
+      // Pro-rata: (defaultDays / 12) * remainingMonths
+      const proRataDays = (defaultDays / 12) * Math.max(0, remainingMonths);
+
+      // Round to nearest 0.5
+      return Math.round(proRataDays * 2) / 2;
+    }
+
     console.log('\nCreating employees...');
     for (const empData of employees) {
       // Generate password from first name: firstname@2026
@@ -85,18 +110,27 @@ async function seed() {
       });
 
       // Create leave balances for each employee
+      const isProbation = empData.status === 'Probation';
+
       for (const leaveType of leaveTypes) {
+        // Calculate pro-rata for probation employees (3 month probation period)
+        let entitledDays = leaveType.default_days;
+        if (isProbation && empData.join_date) {
+          entitledDays = calculateProRataEntitlement(leaveType.default_days, empData.join_date, 3);
+        }
+
         await LeaveBalance.create({
           employee_id: employee.id,
           leave_type_id: leaveType.id,
           year: currentYear,
-          entitled_days: leaveType.default_days,
+          entitled_days: entitledDays,
           used_days: 0,
           pending_days: 0
         });
       }
 
-      console.log(`  ✓ ${empData.employee_id}: ${empData.first_name} ${empData.last_name || ''} (${empData.email}) - Password: ${passwordPlain}`);
+      const proRataNote = isProbation ? ' (Pro-rata)' : '';
+      console.log(`  ✓ ${empData.employee_id}: ${empData.first_name} ${empData.last_name || ''} (${empData.email}) - Password: ${passwordPlain}${proRataNote}`);
     }
 
     // Create balances for admin too

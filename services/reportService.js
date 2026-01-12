@@ -125,17 +125,17 @@ function exportToCSV(data, type) {
       headers = [
         { id: 'name', title: 'Employee Name' },
         { id: 'department', title: 'Department' },
-        { id: 'annual', title: 'Annual Leave' },
-        { id: 'sick', title: 'Sick Leave' },
         { id: 'casual', title: 'Casual Leave' },
+        { id: 'sick', title: 'Sick Leave' },
+        { id: 'flex', title: 'Flex Leave' },
         { id: 'total', title: 'Total Days' }
       ];
       records = data.map(item => ({
         name: `${item.employee.first_name} ${item.employee.last_name}`,
         department: item.employee.department || 'N/A',
-        annual: item.leaves['Annual'] || 0,
-        sick: item.leaves['Sick'] || 0,
         casual: item.leaves['Casual'] || 0,
+        sick: item.leaves['Sick'] || 0,
+        flex: item.leaves['Flex'] || 0,
         total: item.totalDays
       }));
       break;
@@ -148,8 +148,12 @@ function exportToCSV(data, type) {
         { id: 'startDate', title: 'Start Date' },
         { id: 'endDate', title: 'End Date' },
         { id: 'days', title: 'Days' },
+        { id: 'reason', title: 'Reason' },
         { id: 'status', title: 'Status' },
-        { id: 'approvedBy', title: 'Approved By' }
+        { id: 'requestDate', title: 'Request Date' },
+        { id: 'approvalDate', title: 'Approval/Action Date' },
+        { id: 'approvedBy', title: 'Approved By' },
+        { id: 'adminRemarks', title: 'Admin Remarks' }
       ];
       records = data.map(item => ({
         employee: `${item.employee.first_name} ${item.employee.last_name}`,
@@ -158,8 +162,12 @@ function exportToCSV(data, type) {
         startDate: item.start_date,
         endDate: item.end_date,
         days: item.total_days,
+        reason: item.reason || '',
         status: item.status,
-        approvedBy: item.approvedBy ? `${item.approvedBy.first_name} ${item.approvedBy.last_name}` : 'N/A'
+        requestDate: item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : 'N/A',
+        approvalDate: item.updated_at ? new Date(item.updated_at).toISOString().split('T')[0] : 'N/A',
+        approvedBy: item.approvedBy ? `${item.approvedBy.first_name} ${item.approvedBy.last_name}` : 'N/A',
+        adminRemarks: item.admin_remarks || ''
       }));
       break;
 

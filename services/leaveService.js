@@ -198,6 +198,84 @@ async function addEntitlement(data) {
 }
 
 /**
+ * Remove/reduce entitlement from employee(s)
+ */
+async function removeEntitlement(data) {
+  const { employeeIds, leaveTypeId, days, reason, createdBy, year = getCurrentYear() } = data;
+
+  const results = [];
+  for (const employeeId of employeeIds) {
+    const balance = await getOrCreateBalance(employeeId, leaveTypeId, year);
+    const currentEntitled = parseFloat(balance.entitled_days);
+    const usedDays = parseFloat(balance.used_days);
+    const pendingDays = parseFloat(balance.pending_days);
+    const daysToRemove = parseFloat(days);
+
+    // Check if we can remove this many days
+    const minRequired = usedDays + pendingDays;
+    const newEntitled = currentEntitled - daysToRemove;
+
+    if (newEntitled < minRequired) {
+      throw new Error(`Cannot reduce entitlement below ${minRequired} days (used: ${usedDays}, pending: ${pendingDays}) for employee ID ${employeeId}`);
+    }
+
+    if (newEntitled < 0) {
+      throw new Error(`Cannot reduce entitlement below 0 for employee ID ${employeeId}`);
+    }
+
+    await balance.update({
+      entitled_days: newEntitled
+    });
+
+    // Log the removal (negative days)
+    await LeaveEntitlementLog.create({
+      employee_id: employeeId,
+      leave_type_id: leaveTypeId,
+      year,
+      days_added: -daysToRemove,
+      reason: reason || 'Entitlement reduction',
+      created_by: createdBy
+    });
+
+    results.push({ employeeId, newEntitlement: newEntitled });
+  }
+
+  return results;
+}
+
+/**
+ * Calculate pro-rata entitlement for probation employees
+ * @param {number} defaultDays - Full year entitlement
+ * @param {Date|string} joinDate - Employee join date
+ * @param {number} probationMonths - Probation period in months (default 3)
+ * @returns {number} Pro-rata days rounded to nearest 0.5
+ */
+function calculateProRataEntitlement(defaultDays, joinDate, probationMonths = 3) {
+  const join = new Date(joinDate);
+  const year = getCurrentYear();
+  const yearEnd = new Date(year, 11, 31); // Dec 31
+
+  // Calculate months remaining in the year after probation ends
+  const probationEndDate = new Date(join);
+  probationEndDate.setMonth(probationEndDate.getMonth() + probationMonths);
+
+  // If probation ends after year end, no entitlement for this year
+  if (probationEndDate > yearEnd) {
+    return 0;
+  }
+
+  // Calculate remaining months from probation end to year end
+  const remainingMonths = (yearEnd.getMonth() - probationEndDate.getMonth()) +
+                          (yearEnd.getFullYear() - probationEndDate.getFullYear()) * 12 + 1;
+
+  // Pro-rata: (defaultDays / 12) * remainingMonths
+  const proRataDays = (defaultDays / 12) * Math.max(0, remainingMonths);
+
+  // Round to nearest 0.5
+  return Math.round(proRataDays * 2) / 2;
+}
+
+/**
  * Get pending requests for admin
  */
 async function getPendingRequests() {
@@ -318,6 +396,8 @@ module.exports = {
   rejectLeaveRequest,
   cancelLeaveRequest,
   addEntitlement,
+  removeEntitlement,
+  calculateProRataEntitlement,
   getPendingRequests,
   getAllRequests,
   getEmployeeRequests,

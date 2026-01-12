@@ -112,13 +112,21 @@ router.post('/employees/add', async (req, res) => {
     // Create initial leave balances
     const leaveTypes = await LeaveType.findAll({ where: { is_active: true } });
     const year = getCurrentYear();
+    const isProbation = emp_status === 'Probation';
+    const effectiveJoinDate = join_date || new Date().toISOString().split('T')[0];
 
     for (const leaveType of leaveTypes) {
+      // Calculate pro-rata for probation employees (3 month probation period)
+      let entitledDays = leaveType.default_days;
+      if (isProbation && join_date) {
+        entitledDays = leaveService.calculateProRataEntitlement(leaveType.default_days, join_date, 3);
+      }
+
       await LeaveBalance.create({
         employee_id: employee.id,
         leave_type_id: leaveType.id,
         year,
-        entitled_days: leaveType.default_days,
+        entitled_days: entitledDays,
         used_days: 0,
         pending_days: 0
       });
@@ -127,7 +135,8 @@ router.post('/employees/add', async (req, res) => {
     // Send welcome email
     emailService.sendWelcomeEmail(employee, password);
 
-    req.flash('success', `Employee ${first_name} ${last_name} added successfully. Default password: ${password}`);
+    const proRataMsg = isProbation ? ' (Pro-rata entitlement applied for probation)' : '';
+    req.flash('success', `Employee ${first_name} ${last_name} added successfully. Default password: ${password}${proRataMsg}`);
     res.redirect('/admin/employees');
 
   } catch (error) {
@@ -391,6 +400,31 @@ router.post('/entitlements/add', async (req, res) => {
   } catch (error) {
     console.error('Add entitlement error:', error);
     req.flash('error', error.message || 'Error adding entitlement');
+    res.redirect('/admin/entitlements');
+  }
+});
+
+// POST /admin/entitlements/remove
+router.post('/entitlements/remove', async (req, res) => {
+  try {
+    const { employee_id, leave_type_id, days, reason } = req.body;
+    const year = getCurrentYear();
+
+    await leaveService.removeEntitlement({
+      employeeIds: [parseInt(employee_id)],
+      leaveTypeId: parseInt(leave_type_id),
+      days: parseFloat(days),
+      reason,
+      createdBy: req.session.user.id,
+      year
+    });
+
+    req.flash('success', `Successfully removed ${days} days from employee`);
+    res.redirect('/admin/entitlements');
+
+  } catch (error) {
+    console.error('Remove entitlement error:', error);
+    req.flash('error', error.message || 'Error removing entitlement');
     res.redirect('/admin/entitlements');
   }
 });

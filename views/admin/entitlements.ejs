@@ -9,7 +9,7 @@
 
 <div class="row">
   <div class="col-lg-4 mb-4">
-    <div class="card shadow-sm">
+    <div class="card shadow-sm mb-3">
       <div class="card-header bg-primary text-white">
         <h6 class="mb-0"><i class="bi bi-plus-circle"></i> Add Entitlement</h6>
       </div>
@@ -46,6 +46,45 @@
 
           <button type="submit" class="btn btn-primary w-100">
             <i class="bi bi-plus-circle"></i> Add Entitlement
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header bg-danger text-white">
+        <h6 class="mb-0"><i class="bi bi-dash-circle"></i> Remove Entitlement</h6>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/admin/entitlements/remove" onsubmit="return confirm('Are you sure you want to remove entitlement? This cannot be undone.')">
+          <div class="mb-3">
+            <label for="remove_employee_id" class="form-label">Employee</label>
+            <select class="form-select" id="remove_employee_id" name="employee_id" required>
+              <option value="">Select Employee</option>
+              ${employees.map(e => `<option value="${e.id}">${e.first_name} ${e.last_name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="remove_leave_type_id" class="form-label">Leave Type</label>
+            <select class="form-select" id="remove_leave_type_id" name="leave_type_id" required>
+              ${leaveTypes.map(lt => `<option value="${lt.id}">${lt.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="remove_days" class="form-label">Days to Remove</label>
+            <input type="number" class="form-control" id="remove_days" name="days" step="0.5" min="0.5" required>
+            <div class="form-text text-danger">Cannot remove below used + pending days</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="remove_reason" class="form-label">Reason</label>
+            <input type="text" class="form-control" id="remove_reason" name="reason" placeholder="e.g., Correction, Policy change" required>
+          </div>
+
+          <button type="submit" class="btn btn-danger w-100">
+            <i class="bi bi-dash-circle"></i> Remove Entitlement
           </button>
         </form>
       </div>

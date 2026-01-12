@@ -1,0 +1,112 @@
+<%- include('../layouts/main', { body: `
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-${isEdit ? 'pencil' : 'person-plus'}"></i> ${isEdit ? 'Edit' : 'Add'} Employee</h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="/admin/employees/${isEdit ? 'edit/' + employee.id : 'add'}">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="employee_id" class="form-label">Employee ID</label>
+              <input type="text" class="form-control" id="employee_id" name="employee_id"
+                value="${employee ? employee.employee_id || '' : ''}" placeholder="e.g., EMP016">
+            </div>
+            <div class="col-md-4">
+              <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="first_name" name="first_name"
+                value="${employee ? employee.first_name : ''}" required>
+            </div>
+            <div class="col-md-4">
+              <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="last_name" name="last_name"
+                value="${employee ? employee.last_name : ''}" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" id="email" name="email"
+              value="${employee ? employee.email : ''}" ${isEdit ? 'readonly' : 'required'} placeholder="name@infinitelabsdigital.com">
+            ${!isEdit ? '<div class="form-text">This will be used for login</div>' : ''}
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="department" class="form-label">Department/Role</label>
+              <input type="text" class="form-control" id="department" name="department"
+                value="${employee ? employee.department || '' : ''}" placeholder="e.g., Video Editor, SEO Specialist">
+            </div>
+            <div class="col-md-6">
+              <label for="join_date" class="form-label">Join Date</label>
+              <input type="date" class="form-control" id="join_date" name="join_date"
+                value="${employee && employee.join_date ? employee.join_date : ''}">
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="emp_status" class="form-label">Employment Status</label>
+              <select class="form-select" id="emp_status" name="emp_status">
+                <option value="Active" ${employee && employee.status === 'Active' ? 'selected' : ''}>Active</option>
+                <option value="Probation" ${employee && employee.status === 'Probation' ? 'selected' : ''}>Probation</option>
+                <option value="Inactive" ${employee && employee.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="role" class="form-label">System Role <span class="text-danger">*</span></label>
+              <select class="form-select" id="role" name="role" required>
+                <option value="employee" ${employee && employee.role === 'employee' ? 'selected' : ''}>Employee</option>
+                <option value="admin" ${employee && employee.role === 'admin' ? 'selected' : ''}>Admin</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="leave_year_start" class="form-label">Leave Year Start</label>
+              <input type="date" class="form-control" id="leave_year_start" name="leave_year_start"
+                value="${employee && employee.leave_year_start ? employee.leave_year_start : '2026-01-01'}">
+            </div>
+          </div>
+
+          ${isEdit ? `
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="is_active" name="is_active" ${employee.is_active ? 'checked' : ''}>
+                  <label class="form-check-label" for="is_active">Account Active (can login)</label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="reset_password" name="reset_password">
+                  <label class="form-check-label" for="reset_password">Reset Password to Default</label>
+                </div>
+              </div>
+            </div>
+          ` : `
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle"></i>
+              Default password will be: <strong><span id="defaultPwd">firstname@${currentYear}</span></strong>
+            </div>
+          `}
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+            <a href="/admin/employees" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-${isEdit ? 'check-lg' : 'plus-circle'}"></i> ${isEdit ? 'Update' : 'Add'} Employee
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+${!isEdit ? `
+<script>
+document.getElementById('first_name').addEventListener('input', function() {
+  document.getElementById('defaultPwd').textContent = this.value.toLowerCase() + '@${currentYear}';
+});
+</script>
+` : ''}
+` }) %>

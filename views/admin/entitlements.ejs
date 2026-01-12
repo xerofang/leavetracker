@@ -1,0 +1,108 @@
+<%- include('../layouts/main', { body: `
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-gift"></i> Manage Entitlements</h2>
+  <select class="form-select form-select-sm w-auto" onchange="window.location.href='/admin/entitlements?year='+this.value">
+    <option value="${currentYear}" ${year == currentYear ? 'selected' : ''}>${currentYear}</option>
+    <option value="${currentYear - 1}" ${year == currentYear - 1 ? 'selected' : ''}>${currentYear - 1}</option>
+  </select>
+</div>
+
+<div class="row">
+  <div class="col-lg-4 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h6 class="mb-0"><i class="bi bi-plus-circle"></i> Add Entitlement</h6>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/admin/entitlements/add">
+          <div class="mb-3">
+            <label class="form-label">Apply To</label>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="apply_to_all" name="apply_to_all" onchange="toggleEmployeeSelect()">
+              <label class="form-check-label" for="apply_to_all">All Active Employees</label>
+            </div>
+            <select class="form-select" id="employee_ids" name="employee_ids" multiple size="5">
+              ${employees.map(e => `<option value="${e.id}">${e.first_name} ${e.last_name}</option>`).join('')}
+            </select>
+            <div class="form-text">Hold Ctrl/Cmd to select multiple</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="leave_type_id" class="form-label">Leave Type</label>
+            <select class="form-select" id="leave_type_id" name="leave_type_id" required>
+              ${leaveTypes.map(lt => `<option value="${lt.id}">${lt.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="days" class="form-label">Days to Add</label>
+            <input type="number" class="form-control" id="days" name="days" step="0.5" min="0.5" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="reason" class="form-label">Reason</label>
+            <input type="text" class="form-control" id="reason" name="reason" placeholder="e.g., Annual allocation, Bonus leave">
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-plus-circle"></i> Add Entitlement
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-table"></i> Current Balances - ${year}</h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Employee</th>
+                ${leaveTypes.map(lt => `<th class="text-center">${lt.name}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${balanceReport.map(item => `
+                <tr>
+                  <td>
+                    <strong>${item.employee.name}</strong>
+                    <br><small class="text-muted">${item.employee.department || ''}</small>
+                  </td>
+                  ${leaveTypes.map(lt => {
+                    const bal = item.balances.find(b => b.leaveType === lt.name);
+                    return `<td class="text-center">
+                      ${bal ? `
+                        <span class="badge bg-light text-dark">${bal.entitled}</span>
+                        <br>
+                        <small class="text-success">Used: ${bal.used}</small>
+                        <br>
+                        <small class="text-primary">Avail: ${bal.available}</small>
+                      ` : '-'}
+                    </td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleEmployeeSelect() {
+  const checkbox = document.getElementById('apply_to_all');
+  const select = document.getElementById('employee_ids');
+  select.disabled = checkbox.checked;
+  if (checkbox.checked) {
+    select.selectedIndex = -1;
+  }
+}
+</script>
+` }) %>

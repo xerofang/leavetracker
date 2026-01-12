@@ -1,0 +1,186 @@
+/* Custom styles for Leave Tracker */
+
+/* Body and layout */
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+main {
+  flex: 1;
+}
+
+/* Navbar customization */
+.navbar-brand {
+  font-weight: 600;
+}
+
+.nav-link {
+  padding: 0.5rem 1rem !important;
+}
+
+/* Cards */
+.card {
+  border: none;
+  border-radius: 0.5rem;
+}
+
+.card-header {
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+  font-weight: 600;
+}
+
+/* Tables */
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Badges */
+.badge {
+  font-weight: 500;
+}
+
+/* Buttons */
+.btn {
+  border-radius: 0.375rem;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+}
+
+/* Forms */
+.form-control:focus,
+.form-select:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Progress bars */
+.progress {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Alerts */
+.alert {
+  border: none;
+  border-radius: 0.5rem;
+}
+
+/* Stats cards */
+.card.bg-primary,
+.card.bg-success,
+.card.bg-warning,
+.card.bg-info {
+  border-radius: 0.75rem;
+}
+
+/* Calendar customization */
+#calendar {
+  max-width: 100%;
+}
+
+.fc .fc-button-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.fc .fc-button-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+}
+
+.fc .fc-button-primary:disabled {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.fc-event {
+  cursor: pointer;
+  font-size: 0.85em;
+  padding: 2px 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .btn-group-sm > .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Login page */
+.card.shadow {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Footer */
+.footer {
+  margin-top: auto;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  border: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Status badges */
+.badge.bg-warning {
+  color: #000 !important;
+}
+
+/* Modal */
+.modal-content {
+  border: none;
+  border-radius: 0.5rem;
+}
+
+/* Loading state */
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+/* Empty state */
+.text-muted i {
+  opacity: 0.5;
+}
+
+/* Multiselect */
+select[multiple] {
+  height: auto;
+}
+
+/* Print styles */
+@media print {
+  .navbar,
+  .btn,
+  footer {
+    display: none !important;
+  }
+
+  .card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+  }
+}

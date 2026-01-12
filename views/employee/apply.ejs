@@ -1,0 +1,124 @@
+<%- include('../layouts/main', { body: `
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Apply for Leave</h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="/employee/apply" id="leaveForm">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="leave_type_id" class="form-label">Leave Type <span class="text-danger">*</span></label>
+              <select class="form-select" id="leave_type_id" name="leave_type_id" required>
+                <option value="">Select leave type</option>
+                ${leaveTypes.map(lt => `
+                  <option value="${lt.id}">${lt.name}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Available Balance</label>
+              <div id="balanceInfo" class="form-control bg-light">Select leave type</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="start_date" name="start_date" required>
+            </div>
+            <div class="col-md-6">
+              <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="end_date" name="end_date" required>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Working Days</label>
+              <div id="workingDays" class="form-control bg-light">0 days</div>
+            </div>
+            <div class="col-md-6">
+              <div id="balanceCheck" class="mt-4"></div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="reason" class="form-label">Reason</label>
+            <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Enter reason for leave (optional)"></textarea>
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="/employee/dashboard" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <i class="bi bi-send"></i> Submit Request
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-4 shadow-sm">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-info-circle"></i> Your Leave Balances</h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          ${balances.map(b => `
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between">
+                <span>${b.leaveType.name}:</span>
+                <strong>${b.available.toFixed(1)} days</strong>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const balances = ${JSON.stringify(balances.map(b => ({ id: b.leaveType.id, name: b.leaveType.name, available: b.available })))};
+
+document.getElementById('leave_type_id').addEventListener('change', updateBalance);
+document.getElementById('start_date').addEventListener('change', calculateDays);
+document.getElementById('end_date').addEventListener('change', calculateDays);
+
+function updateBalance() {
+  const leaveTypeId = document.getElementById('leave_type_id').value;
+  const balance = balances.find(b => b.id == leaveTypeId);
+  document.getElementById('balanceInfo').textContent = balance ? balance.available.toFixed(1) + ' days available' : 'Select leave type';
+  calculateDays();
+}
+
+async function calculateDays() {
+  const start = document.getElementById('start_date').value;
+  const end = document.getElementById('end_date').value;
+  const leaveTypeId = document.getElementById('leave_type_id').value;
+
+  if (start && end) {
+    const response = await fetch('/employee/api/calculate-days?start=' + start + '&end=' + end);
+    const data = await response.json();
+    document.getElementById('workingDays').textContent = data.days + ' working day' + (data.days !== 1 ? 's' : '');
+
+    if (leaveTypeId && data.days > 0) {
+      const balance = balances.find(b => b.id == leaveTypeId);
+      if (balance) {
+        const balanceCheck = document.getElementById('balanceCheck');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (data.days <= balance.available) {
+          balanceCheck.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Sufficient balance</span>';
+          submitBtn.disabled = false;
+        } else {
+          balanceCheck.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Insufficient balance (need ' + (data.days - balance.available).toFixed(1) + ' more days)</span>';
+          submitBtn.disabled = true;
+        }
+      }
+    }
+  }
+}
+</script>
+` }) %>

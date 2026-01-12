@@ -1,0 +1,43 @@
+<%- include('../layouts/main', {
+  extraHead: `
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+  `,
+  body: `
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-calendar3"></i> My Leave Calendar</h2>
+  <a href="/employee/apply" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Apply for Leave
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="mb-3">
+      <span class="badge bg-success me-2">● Approved</span>
+      <span class="badge bg-warning text-dark">● Pending</span>
+    </div>
+    <div id="calendar"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarEl = document.getElementById('calendar');
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,dayGridWeek'
+    },
+    events: '/employee/api/calendar',
+    eventClick: function(info) {
+      const props = info.event.extendedProps;
+      alert(props.leaveType + ' (' + props.days + ' days)\\nStatus: ' + props.status);
+    }
+  });
+  calendar.render();
+});
+</script>
+` }) %>

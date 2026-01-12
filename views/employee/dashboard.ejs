@@ -1,0 +1,83 @@
+<%- include('../layouts/main', { body: `
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+  <a href="/employee/apply" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Apply for Leave
+  </a>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <h5 class="text-muted mb-3">Leave Balances - ${year}</h5>
+  </div>
+  ${balances.map(b => `
+    <div class="col-md-4 mb-3">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">${b.leaveType.name}</h6>
+              <h3 class="mb-0">${b.available.toFixed(1)} <small class="text-muted fs-6">days</small></h3>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-light text-dark">Entitled: ${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
+              <br>
+              <span class="badge bg-success mt-1">Used: ${parseFloat(b.balance.used_days).toFixed(1)}</span>
+              ${parseFloat(b.balance.pending_days) > 0 ? `<br><span class="badge bg-warning text-dark mt-1">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>` : ''}
+            </div>
+          </div>
+          <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar bg-success" style="width: ${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
+            <div class="progress-bar bg-warning" style="width: ${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('')}
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Requests</h5>
+    <a href="/employee/history" class="btn btn-sm btn-outline-primary">View All</a>
+  </div>
+  <div class="card-body p-0">
+    ${recentRequests.length > 0 ? `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Type</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Days</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recentRequests.map(r => `
+              <tr>
+                <td>${r.leaveType.name}</td>
+                <td>${formatDate(r.start_date)}</td>
+                <td>${formatDate(r.end_date)}</td>
+                <td>${r.total_days}</td>
+                <td>
+                  <span class="badge bg-${r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : r.status === 'cancelled' ? 'secondary' : 'warning'}">
+                    ${r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                  </span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : `
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+        <p class="mt-2">No leave requests yet</p>
+        <a href="/employee/apply" class="btn btn-primary btn-sm">Apply for Leave</a>
+      </div>
+    `}
+  </div>
+</div>
+` }) %>

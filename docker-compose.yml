@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: leavetracker-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-secret-key}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=leavetracker
+      - DB_USER=leavetracker
+      - DB_PASS=${DB_PASS:-leavetracker123}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@company.com}
+      - COMPANY_NAME=${COMPANY_NAME:-Leave Tracker}
+      - CURRENT_YEAR=${CURRENT_YEAR:-2026}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - leavetracker-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: leavetracker-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword123}
+      - MYSQL_DATABASE=leavetracker
+      - MYSQL_USER=leavetracker
+      - MYSQL_PASSWORD=${DB_PASS:-leavetracker123}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - leavetracker-network
+
+volumes:
+  mysql_data:
+
+networks:
+  leavetracker-network:
+    driver: bridge

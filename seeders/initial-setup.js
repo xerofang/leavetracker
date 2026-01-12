@@ -1,6 +1,5 @@
 require('dotenv').config();
 const { sequelize, Employee, LeaveType, LeaveBalance } = require('../models');
-const bcrypt = require('bcryptjs');
 
 async function seed() {
   try {
@@ -34,11 +33,11 @@ async function seed() {
     console.log('Leave types created:', leaveTypes.map(lt => `${lt.name} (${lt.default_days} days)`).join(', '));
 
     // Create admin user (CEO/HR - info@infinitelabsdigital.com)
-    const adminPassword = await bcrypt.hash('admin@2026', 10);
+    // Note: Password will be hashed by Employee model's beforeCreate hook
     const admin = await Employee.create({
       employee_id: 'ADMIN001',
       email: 'info@infinitelabsdigital.com',
-      password: adminPassword,
+      password: 'admin@2026',
       first_name: 'Admin',
       last_name: 'HR',
       department: 'Management',
@@ -74,13 +73,13 @@ async function seed() {
     console.log('\nCreating employees...');
     for (const empData of employees) {
       // Generate password from first name: firstname@2026
+      // Note: Password will be hashed by Employee model's beforeCreate hook
       const passwordPlain = `${empData.first_name.toLowerCase()}@${currentYear}`;
-      const password = await bcrypt.hash(passwordPlain, 10);
 
       const employee = await Employee.create({
         ...empData,
         last_name: empData.last_name || empData.first_name, // Handle single name case
-        password,
+        password: passwordPlain,
         role: 'employee',
         is_active: true
       });

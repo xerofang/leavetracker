@@ -7,6 +7,9 @@ const { sequelize } = require('./models');
 
 const app = express();
 
+// Trust proxy for secure cookies behind reverse proxy (Easypanel/nginx)
+app.set('trust proxy', 1);
+
 // View engine setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -83,8 +86,8 @@ const PORT = process.env.PORT || 3000;
 sequelize.sync({ alter: process.env.NODE_ENV === 'development' })
   .then(() => {
     console.log('Database connected and synced');
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
     });
   })
   .catch(err => {

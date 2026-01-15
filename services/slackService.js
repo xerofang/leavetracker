@@ -78,15 +78,39 @@ function formatDate(date) {
 }
 
 /**
+ * Format employee name with Slack @mention if slack_user_id is available
+ */
+function formatEmployeeMention(employee) {
+  const fullName = `${employee.first_name} ${employee.last_name}`;
+  if (employee.slack_user_id) {
+    return `<@${employee.slack_user_id}>`;
+  }
+  return fullName;
+}
+
+/**
+ * Format employee name for bold display (with @mention if available)
+ */
+function formatEmployeeBold(employee) {
+  const fullName = `${employee.first_name} ${employee.last_name}`;
+  if (employee.slack_user_id) {
+    return `<@${employee.slack_user_id}> (${fullName})`;
+  }
+  return `*${fullName}*`;
+}
+
+/**
  * Notify HR/Admin about new leave request
  */
 async function notifyNewLeaveRequest(request, employee, leaveType) {
   const webhookUrl = process.env.SLACK_HR_WEBHOOK_URL;
   const companyName = process.env.COMPANY_NAME || 'Leave Tracker';
   const appUrl = process.env.APP_URL || '';
+  const employeeName = `${employee.first_name} ${employee.last_name}`;
+  const employeeMention = formatEmployeeMention(employee);
 
   // Simple text fallback (required by Slack)
-  const textFallback = `📋 New Leave Request from ${employee.first_name} ${employee.last_name}\n` +
+  const textFallback = `📋 New Leave Request from ${employeeName}\n` +
     `• Leave Type: ${leaveType.name}\n` +
     `• Duration: ${request.total_days} day(s)\n` +
     `• From: ${formatDate(request.start_date)} To: ${formatDate(request.end_date)}\n` +
@@ -109,7 +133,7 @@ async function notifyNewLeaveRequest(request, employee, leaveType) {
         fields: [
           {
             type: 'mrkdwn',
-            text: `*Employee:*\n${employee.first_name} ${employee.last_name}`
+            text: `*Employee:*\n${employee.slack_user_id ? employeeMention + ' (' + employeeName + ')' : employeeName}`
           },
           {
             type: 'mrkdwn',
@@ -182,6 +206,8 @@ async function notifyNewLeaveRequest(request, employee, leaveType) {
  */
 async function notifyLeaveApproved(request, employee, leaveType, adminName) {
   const webhookUrl = process.env.SLACK_EMPLOYEE_WEBHOOK_URL || process.env.SLACK_HR_WEBHOOK_URL;
+  const employeeMention = formatEmployeeMention(employee);
+  const employeeBold = formatEmployeeBold(employee);
 
   // Simple text fallback
   const textFallback = `✅ Leave Approved for ${employee.first_name} ${employee.last_name}\n` +
@@ -205,7 +231,7 @@ async function notifyLeaveApproved(request, employee, leaveType, adminName) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `Great news *${employee.first_name} ${employee.last_name}*! Your leave request has been *approved*.`
+          text: `Great news ${employeeBold}! Your leave request has been *approved*.`
         }
       },
       {
@@ -272,6 +298,8 @@ async function notifyLeaveApproved(request, employee, leaveType, adminName) {
  */
 async function notifyLeaveRejected(request, employee, leaveType, adminName) {
   const webhookUrl = process.env.SLACK_EMPLOYEE_WEBHOOK_URL || process.env.SLACK_HR_WEBHOOK_URL;
+  const employeeMention = formatEmployeeMention(employee);
+  const employeeBold = formatEmployeeBold(employee);
 
   // Simple text fallback
   const textFallback = `❌ Leave Rejected for ${employee.first_name} ${employee.last_name}\n` +
@@ -296,7 +324,7 @@ async function notifyLeaveRejected(request, employee, leaveType, adminName) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `Hi *${employee.first_name} ${employee.last_name}*, unfortunately your leave request has been *rejected*.`
+          text: `Hi ${employeeBold}, unfortunately your leave request has been *rejected*.`
         }
       },
       {
@@ -363,9 +391,11 @@ async function notifyLeaveRejected(request, employee, leaveType, adminName) {
  */
 async function notifyLeaveCancelled(request, employee, leaveType) {
   const webhookUrl = process.env.SLACK_HR_WEBHOOK_URL;
+  const employeeName = `${employee.first_name} ${employee.last_name}`;
+  const employeeBold = formatEmployeeBold(employee);
 
   // Simple text fallback
-  const textFallback = `🚫 Leave Cancelled by ${employee.first_name} ${employee.last_name}\n` +
+  const textFallback = `🚫 Leave Cancelled by ${employeeName}\n` +
     `• Leave Type: ${leaveType.name}\n` +
     `• Duration: ${request.total_days} day(s)\n` +
     `• From: ${formatDate(request.start_date)} To: ${formatDate(request.end_date)}`;
@@ -385,7 +415,7 @@ async function notifyLeaveCancelled(request, employee, leaveType) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*${employee.first_name} ${employee.last_name}* has cancelled their leave request.`
+          text: `${employeeBold} has cancelled their leave request.`
         }
       },
       {

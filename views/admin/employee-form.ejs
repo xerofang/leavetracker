@@ -68,6 +68,15 @@
             </div>
           </div>
 
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="slack_user_id" class="form-label">Slack User ID</label>
+              <input type="text" class="form-control" id="slack_user_id" name="slack_user_id"
+                value="${employee && employee.slack_user_id ? employee.slack_user_id : ''}" placeholder="e.g., U1234567890">
+              <div class="form-text">For @ mentions in Slack notifications. Find in Slack: Profile > ... > Copy member ID</div>
+            </div>
+          </div>
+
           ${isEdit ? `
             <div class="row mb-3">
               <div class="col-md-6">

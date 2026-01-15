@@ -529,15 +529,45 @@ async function getEmployeeRequests(employeeId, year = null) {
  * Get leaves for calendar (approved + pending)
  */
 async function getLeavesForCalendar(startDate, endDate, employeeId = null) {
+  // Parse and format dates to YYYY-MM-DD for MySQL DATE columns
+  // FullCalendar may send dates with timezone info that can get corrupted
+  const parseCalendarDate = (dateStr) => {
+    if (!dateStr) return null;
+    try {
+      // Handle various formats from FullCalendar
+      // Replace space before timezone with + (URL encoding issue)
+      const cleanedDate = dateStr.replace(/\s(\d{2}:\d{2})$/, '+$1');
+      const date = new Date(cleanedDate);
+      if (isNaN(date.getTime())) {
+        // Try parsing just the date portion
+        const datePart = dateStr.split('T')[0];
+        return datePart;
+      }
+      return date.toISOString().split('T')[0];
+    } catch (e) {
+      // Fallback: extract just the date part
+      const match = dateStr.match(/^\d{4}-\d{2}-\d{2}/);
+      return match ? match[0] : null;
+    }
+  };
+
+  const start = parseCalendarDate(startDate);
+  const end = parseCalendarDate(endDate);
+
+  if (!start || !end) {
+    console.error('Invalid calendar dates:', { startDate, endDate, parsed: { start, end } });
+    return [];
+  }
+
   const where = {
     status: { [Op.in]: ['approved', 'pending'] },
     [Op.or]: [
-      { start_date: { [Op.between]: [startDate, endDate] } },
-      { end_date: { [Op.between]: [startDate, endDate] } },
+      { start_date: { [Op.between]: [start, end] } },
+      { end_date: { [Op.between]: [start, end] } },
       {
         [Op.and]: [
-          { start_date: { [Op.lte]: startDate } },
-          { end_date: { [Op.gte]: endDate } }
+          { start_date: { [Op.lte]: start } },
+          { end_date: { [Op.gte]: end } }
         ]
       }
     ]

@@ -79,14 +79,15 @@ router.get('/employees/add', (req, res) => {
   res.render('admin/employee-form', {
     title: 'Add Employee',
     employee: null,
-    isEdit: false
+    isEdit: false,
+    currentYear: getCurrentYear()
   });
 });
 
 // POST /admin/employees/add
 router.post('/employees/add', async (req, res) => {
   try {
-    const { employee_id, email, first_name, last_name, department, role, join_date, emp_status, leave_year_start } = req.body;
+    const { employee_id, email, first_name, last_name, department, role, join_date, emp_status, leave_year_start, slack_user_id } = req.body;
 
     const existing = await Employee.findOne({ where: { email: email.toLowerCase() } });
     if (existing) {
@@ -106,7 +107,8 @@ router.post('/employees/add', async (req, res) => {
       status: emp_status || 'Active',
       role: role || 'employee',
       is_active: true,
-      leave_year_start: leave_year_start || null
+      leave_year_start: leave_year_start || null,
+      slack_user_id: slack_user_id || null
     });
 
     // Create initial leave balances
@@ -176,7 +178,7 @@ router.post('/employees/edit/:id', async (req, res) => {
       return res.redirect('/admin/employees');
     }
 
-    const { employee_id, first_name, last_name, department, role, is_active, reset_password, join_date, emp_status, leave_year_start } = req.body;
+    const { employee_id, first_name, last_name, department, role, is_active, reset_password, join_date, emp_status, leave_year_start, slack_user_id } = req.body;
 
     const updateData = {
       employee_id: employee_id || employee.employee_id,
@@ -187,7 +189,8 @@ router.post('/employees/edit/:id', async (req, res) => {
       status: emp_status || employee.status,
       role: role || 'employee',
       is_active: is_active === 'on' || is_active === 'true',
-      leave_year_start: leave_year_start || employee.leave_year_start
+      leave_year_start: leave_year_start || employee.leave_year_start,
+      slack_user_id: slack_user_id || null
     };
 
     if (reset_password === 'on') {

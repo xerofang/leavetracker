@@ -56,6 +56,11 @@ module.exports = (sequelize) => {
     leave_year_start: {
       type: DataTypes.DATEONLY,
       allowNull: true
+    },
+    slack_user_id: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Slack member ID for @ mentions (e.g., U1234567890)'
     }
   }, {
     tableName: 'employees',

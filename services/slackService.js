@@ -10,8 +10,11 @@ const http = require('http');
  * Send message to Slack webhook
  */
 async function sendToSlack(webhookUrl, payload) {
+  console.log('Slack: Attempting to send notification...');
+  console.log('Slack: Webhook URL configured:', webhookUrl ? 'Yes' : 'No');
+
   if (!webhookUrl) {
-    console.log('Slack webhook not configured, skipping notification');
+    console.log('Slack: Webhook not configured, skipping notification');
     return { success: false, message: 'Slack webhook not configured' };
   }
 
@@ -19,6 +22,8 @@ async function sendToSlack(webhookUrl, payload) {
     try {
       const url = new URL(webhookUrl);
       const data = JSON.stringify(payload);
+
+      console.log('Slack: Sending to', url.hostname + url.pathname);
 
       const options = {
         hostname: url.hostname,
@@ -37,24 +42,24 @@ async function sendToSlack(webhookUrl, payload) {
         res.on('data', chunk => responseData += chunk);
         res.on('end', () => {
           if (res.statusCode === 200) {
-            console.log('Slack notification sent successfully');
+            console.log('Slack: Notification sent successfully');
             resolve({ success: true });
           } else {
-            console.error('Slack error:', res.statusCode, responseData);
+            console.error('Slack: Error response:', res.statusCode, responseData);
             resolve({ success: false, message: responseData });
           }
         });
       });
 
       req.on('error', (error) => {
-        console.error('Slack request error:', error.message);
+        console.error('Slack: Request error:', error.message);
         resolve({ success: false, message: error.message });
       });
 
       req.write(data);
       req.end();
     } catch (error) {
-      console.error('Slack error:', error.message);
+      console.error('Slack: Exception:', error.message);
       resolve({ success: false, message: error.message });
     }
   });
@@ -78,8 +83,18 @@ function formatDate(date) {
 async function notifyNewLeaveRequest(request, employee, leaveType) {
   const webhookUrl = process.env.SLACK_HR_WEBHOOK_URL;
   const companyName = process.env.COMPANY_NAME || 'Leave Tracker';
+  const appUrl = process.env.APP_URL || '';
+
+  // Simple text fallback (required by Slack)
+  const textFallback = `📋 New Leave Request from ${employee.first_name} ${employee.last_name}\n` +
+    `• Leave Type: ${leaveType.name}\n` +
+    `• Duration: ${request.total_days} day(s)\n` +
+    `• From: ${formatDate(request.start_date)} To: ${formatDate(request.end_date)}\n` +
+    `• Reason: ${request.reason || 'Not provided'}\n` +
+    `Please login to approve or reject this request.`;
 
   const payload = {
+    text: textFallback,
     blocks: [
       {
         type: 'header',
@@ -99,7 +114,12 @@ async function notifyNewLeaveRequest(request, employee, leaveType) {
           {
             type: 'mrkdwn',
             text: `*Department:*\n${employee.department || 'N/A'}`
-          },
+          }
+        ]
+      },
+      {
+        type: 'section',
+        fields: [
           {
             type: 'mrkdwn',
             text: `*Leave Type:*\n${leaveType.name}`
@@ -107,7 +127,12 @@ async function notifyNewLeaveRequest(request, employee, leaveType) {
           {
             type: 'mrkdwn',
             text: `*Duration:*\n${request.total_days} day(s)`
-          },
+          }
+        ]
+      },
+      {
+        type: 'section',
+        fields: [
           {
             type: 'mrkdwn',
             text: `*From:*\n${formatDate(request.start_date)}`
@@ -141,7 +166,9 @@ async function notifyNewLeaveRequest(request, employee, leaveType) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `🔗 *Action Required:* Please login to <${process.env.APP_URL || 'the admin panel'}|${companyName} Leave Tracker> to approve or reject this request.`
+          text: appUrl
+            ? `🔗 *Action Required:* Please login to <${appUrl}|${companyName} Leave Tracker> to approve or reject.`
+            : `🔗 *Action Required:* Please login to approve or reject this request.`
         }
       }
     ]
@@ -156,7 +183,15 @@ async function notifyNewLeaveRequest(request, employee, leaveType) {
 async function notifyLeaveApproved(request, employee, leaveType, adminName) {
   const webhookUrl = process.env.SLACK_EMPLOYEE_WEBHOOK_URL || process.env.SLACK_HR_WEBHOOK_URL;
 
+  // Simple text fallback
+  const textFallback = `✅ Leave Approved for ${employee.first_name} ${employee.last_name}\n` +
+    `• Leave Type: ${leaveType.name}\n` +
+    `• Duration: ${request.total_days} day(s)\n` +
+    `• From: ${formatDate(request.start_date)} To: ${formatDate(request.end_date)}\n` +
+    `• Approved by: ${adminName}`;
+
   const payload = {
+    text: textFallback,
     blocks: [
       {
         type: 'header',
@@ -170,7 +205,7 @@ async function notifyLeaveApproved(request, employee, leaveType, adminName) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `Great news <@${employee.email}>! Your leave request has been *approved*.`
+          text: `Great news *${employee.first_name} ${employee.last_name}*! Your leave request has been *approved*.`
         }
       },
       {
@@ -178,20 +213,17 @@ async function notifyLeaveApproved(request, employee, leaveType, adminName) {
         fields: [
           {
             type: 'mrkdwn',
-            text: `*Employee:*\n${employee.first_name} ${employee.last_name}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Approved By:*\n${adminName}`
-          },
-          {
-            type: 'mrkdwn',
             text: `*Leave Type:*\n${leaveType.name}`
           },
           {
             type: 'mrkdwn',
             text: `*Duration:*\n${request.total_days} day(s)`
-          },
+          }
+        ]
+      },
+      {
+        type: 'section',
+        fields: [
           {
             type: 'mrkdwn',
             text: `*From:*\n${formatDate(request.start_date)}`
@@ -201,6 +233,13 @@ async function notifyLeaveApproved(request, employee, leaveType, adminName) {
             text: `*To:*\n${formatDate(request.end_date)}`
           }
         ]
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Approved By:* ${adminName}`
+        }
       }
     ]
   };
@@ -234,7 +273,16 @@ async function notifyLeaveApproved(request, employee, leaveType, adminName) {
 async function notifyLeaveRejected(request, employee, leaveType, adminName) {
   const webhookUrl = process.env.SLACK_EMPLOYEE_WEBHOOK_URL || process.env.SLACK_HR_WEBHOOK_URL;
 
+  // Simple text fallback
+  const textFallback = `❌ Leave Rejected for ${employee.first_name} ${employee.last_name}\n` +
+    `• Leave Type: ${leaveType.name}\n` +
+    `• Duration: ${request.total_days} day(s)\n` +
+    `• From: ${formatDate(request.start_date)} To: ${formatDate(request.end_date)}\n` +
+    `• Rejected by: ${adminName}\n` +
+    `${request.admin_remarks ? `• Reason: ${request.admin_remarks}` : ''}`;
+
   const payload = {
+    text: textFallback,
     blocks: [
       {
         type: 'header',
@@ -248,7 +296,7 @@ async function notifyLeaveRejected(request, employee, leaveType, adminName) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `Hi <@${employee.email}>, unfortunately your leave request has been *rejected*.`
+          text: `Hi *${employee.first_name} ${employee.last_name}*, unfortunately your leave request has been *rejected*.`
         }
       },
       {
@@ -256,20 +304,17 @@ async function notifyLeaveRejected(request, employee, leaveType, adminName) {
         fields: [
           {
             type: 'mrkdwn',
-            text: `*Employee:*\n${employee.first_name} ${employee.last_name}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Rejected By:*\n${adminName}`
-          },
-          {
-            type: 'mrkdwn',
             text: `*Leave Type:*\n${leaveType.name}`
           },
           {
             type: 'mrkdwn',
             text: `*Duration:*\n${request.total_days} day(s)`
-          },
+          }
+        ]
+      },
+      {
+        type: 'section',
+        fields: [
           {
             type: 'mrkdwn',
             text: `*From:*\n${formatDate(request.start_date)}`
@@ -279,6 +324,13 @@ async function notifyLeaveRejected(request, employee, leaveType, adminName) {
             text: `*To:*\n${formatDate(request.end_date)}`
           }
         ]
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Rejected By:* ${adminName}`
+        }
       }
     ]
   };
@@ -312,7 +364,14 @@ async function notifyLeaveRejected(request, employee, leaveType, adminName) {
 async function notifyLeaveCancelled(request, employee, leaveType) {
   const webhookUrl = process.env.SLACK_HR_WEBHOOK_URL;
 
+  // Simple text fallback
+  const textFallback = `🚫 Leave Cancelled by ${employee.first_name} ${employee.last_name}\n` +
+    `• Leave Type: ${leaveType.name}\n` +
+    `• Duration: ${request.total_days} day(s)\n` +
+    `• From: ${formatDate(request.start_date)} To: ${formatDate(request.end_date)}`;
+
   const payload = {
+    text: textFallback,
     blocks: [
       {
         type: 'header',
@@ -326,7 +385,7 @@ async function notifyLeaveCancelled(request, employee, leaveType) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `${employee.first_name} ${employee.last_name} has cancelled their leave request.`
+          text: `*${employee.first_name} ${employee.last_name}* has cancelled their leave request.`
         }
       },
       {
@@ -339,7 +398,12 @@ async function notifyLeaveCancelled(request, employee, leaveType) {
           {
             type: 'mrkdwn',
             text: `*Duration:*\n${request.total_days} day(s)`
-          },
+          }
+        ]
+      },
+      {
+        type: 'section',
+        fields: [
           {
             type: 'mrkdwn',
             text: `*From:*\n${formatDate(request.start_date)}`
@@ -365,6 +429,7 @@ async function sendCustomMessage(message, channel = 'hr') {
     : process.env.SLACK_EMPLOYEE_WEBHOOK_URL;
 
   const payload = {
+    text: message,
     blocks: [
       {
         type: 'section',

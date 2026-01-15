@@ -3,7 +3,7 @@ const router = express.Router();
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
 const { Employee, LeaveType, LeaveRequest, LeaveBalance } = require('../models');
 const leaveService = require('../services/leaveService');
-const emailService = require('../services/emailService');
+const notificationService = require('../services/notificationService');
 const reportService = require('../services/reportService');
 const { generateDefaultPassword } = require('../utils/passwordUtils');
 const { calculateWorkingDays, getCurrentYear, formatDate } = require('../utils/dateUtils');
@@ -132,8 +132,8 @@ router.post('/employees/add', async (req, res) => {
       });
     }
 
-    // Send welcome email
-    emailService.sendWelcomeEmail(employee, password);
+    // Send welcome email notification
+    notificationService.notifyNewEmployee(employee, password);
 
     const proRataMsg = isProbation ? ' (Pro-rata entitlement applied for probation)' : '';
     req.flash('success', `Employee ${first_name} ${last_name} added successfully. Default password: ${password}${proRataMsg}`);
@@ -266,12 +266,12 @@ router.post('/requests/approve/:id', async (req, res) => {
       remarks
     );
 
-    // Send notification
+    // Send notifications (Email + Slack) to employee
     const employee = await Employee.findByPk(request.employee_id);
     const leaveType = await LeaveType.findByPk(request.leave_type_id);
-    const adminName = `${req.session.user.first_name} ${req.session.user.last_name}`;
+    const admin = await Employee.findByPk(req.session.user.id);
 
-    emailService.notifyLeaveApproved(request, employee, leaveType, adminName);
+    notificationService.notifyLeaveApproved(request, employee, leaveType, admin);
 
     req.flash('success', 'Leave request approved');
   } catch (error) {
@@ -291,12 +291,12 @@ router.post('/requests/reject/:id', async (req, res) => {
       remarks
     );
 
-    // Send notification
+    // Send notifications (Email + Slack) to employee
     const employee = await Employee.findByPk(request.employee_id);
     const leaveType = await LeaveType.findByPk(request.leave_type_id);
-    const adminName = `${req.session.user.first_name} ${req.session.user.last_name}`;
+    const admin = await Employee.findByPk(req.session.user.id);
 
-    emailService.notifyLeaveRejected(request, employee, leaveType, adminName);
+    notificationService.notifyLeaveRejected(request, employee, leaveType, admin);
 
     req.flash('success', 'Leave request rejected');
   } catch (error) {

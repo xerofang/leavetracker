@@ -3,7 +3,7 @@ const router = express.Router();
 const { isAuthenticated, isActive } = require('../middleware/auth');
 const { LeaveType, LeaveRequest, Employee } = require('../models');
 const leaveService = require('../services/leaveService');
-const emailService = require('../services/emailService');
+const notificationService = require('../services/notificationService');
 const { calculateWorkingDays, getCurrentYear, formatDate } = require('../utils/dateUtils');
 
 // Apply authentication middleware to all routes
@@ -87,17 +87,11 @@ router.post('/apply', async (req, res) => {
       reason
     });
 
-    // Notify admins
-    const admins = await Employee.findAll({ where: { role: 'admin', is_active: true } });
+    // Send notifications (Email + Slack) to admins
     const leaveType = await LeaveType.findByPk(leave_type_id);
     const employee = await Employee.findByPk(req.session.user.id);
 
-    emailService.notifyLeaveRequest(
-      request,
-      employee,
-      leaveType,
-      admins.map(a => a.email)
-    );
+    notificationService.notifyNewLeaveRequest(request, employee, leaveType);
 
     req.flash('success', 'Leave request submitted successfully');
     res.redirect('/employee/history');
@@ -132,8 +126,22 @@ router.get('/history', async (req, res) => {
 // POST /employee/cancel/:id
 router.post('/cancel/:id', async (req, res) => {
   try {
-    await leaveService.cancelLeaveRequest(parseInt(req.params.id), req.session.user.id);
-    req.flash('success', 'Leave request cancelled');
+    // Get request details before cancelling
+    const request = await LeaveRequest.findByPk(req.params.id, {
+      include: [{ model: LeaveType, as: 'leaveType' }]
+    });
+
+    if (request) {
+      await leaveService.cancelLeaveRequest(parseInt(req.params.id), req.session.user.id);
+
+      // Send cancellation notification to HR
+      const employee = await Employee.findByPk(req.session.user.id);
+      notificationService.notifyLeaveCancelled(request, employee, request.leaveType);
+
+      req.flash('success', 'Leave request cancelled');
+    } else {
+      req.flash('error', 'Leave request not found');
+    }
   } catch (error) {
     console.error('Cancel error:', error);
     req.flash('error', error.message || 'Error cancelling request');

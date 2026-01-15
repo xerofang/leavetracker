@@ -244,6 +244,42 @@ async function removeEntitlement(data) {
 }
 
 /**
+ * Calculate vacation entitlement based on tenure (years of service)
+ * Company Policy:
+ * - Year 1 (0-2 years): 7 days
+ * - Year 3 (2-4 years): 14 days
+ * - Year 5+ (5+ years): 18 days
+ * @param {Date|string} joinDate - Employee join date
+ * @returns {number} Vacation entitlement based on tenure
+ */
+function calculateTenureBasedVacation(joinDate) {
+  if (!joinDate) return 7; // Default to Year 1 if no join date
+
+  const join = new Date(joinDate);
+  const now = new Date();
+
+  // Calculate years of service
+  let yearsOfService = now.getFullYear() - join.getFullYear();
+
+  // Adjust if anniversary hasn't passed this year
+  const thisYearAnniversary = new Date(now.getFullYear(), join.getMonth(), join.getDate());
+  if (now < thisYearAnniversary) {
+    yearsOfService--;
+  }
+
+  yearsOfService = Math.max(0, yearsOfService);
+
+  // Apply company policy
+  if (yearsOfService >= 5) {
+    return 18; // Year 5+: 18 days
+  } else if (yearsOfService >= 2) {
+    return 14; // Year 3 (2-4 years): 14 days
+  } else {
+    return 7; // Year 1 (0-2 years): 7 days
+  }
+}
+
+/**
  * Calculate pro-rata entitlement for probation employees
  * @param {number} defaultDays - Full year entitlement
  * @param {Date|string} joinDate - Employee join date
@@ -273,6 +309,160 @@ function calculateProRataEntitlement(defaultDays, joinDate, probationMonths = 3)
 
   // Round to nearest 0.5
   return Math.round(proRataDays * 2) / 2;
+}
+
+/**
+ * Rebalance all employee entitlements based on company policy
+ * Company Policy:
+ * - Vacation: Based on tenure (7/14/18 days)
+ * - Flex: 3 days for everyone
+ * - Probation employees get pro-rata
+ * @param {number} adminId - Admin performing the rebalance
+ * @param {number} year - Year to rebalance (default: current year)
+ * @returns {Object} Summary of changes made
+ */
+async function rebalanceAllEntitlements(adminId, year = getCurrentYear()) {
+  const employees = await Employee.findAll({ where: { is_active: true } });
+  const leaveTypes = await LeaveType.findAll({ where: { is_active: true } });
+
+  // Find leave type IDs (by name, case-insensitive)
+  const vacationType = leaveTypes.find(lt =>
+    lt.name.toLowerCase().includes('vacation') ||
+    lt.name.toLowerCase().includes('casual') ||
+    lt.name.toLowerCase().includes('annual')
+  );
+  const flexType = leaveTypes.find(lt =>
+    lt.name.toLowerCase().includes('flex')
+  );
+
+  const results = {
+    processed: 0,
+    changes: [],
+    errors: []
+  };
+
+  for (const employee of employees) {
+    try {
+      const isProbation = employee.status === 'Probation';
+      const joinDate = employee.join_date;
+
+      // Calculate correct vacation entitlement based on tenure
+      if (vacationType) {
+        let correctVacationDays = calculateTenureBasedVacation(joinDate);
+
+        // Apply pro-rata for probation employees
+        if (isProbation && joinDate) {
+          correctVacationDays = calculateProRataEntitlement(correctVacationDays, joinDate, 3);
+        }
+
+        const vacationBalance = await getOrCreateBalance(employee.id, vacationType.id, year);
+        const currentVacation = parseFloat(vacationBalance.entitled_days);
+        const usedDays = parseFloat(vacationBalance.used_days);
+        const pendingDays = parseFloat(vacationBalance.pending_days);
+
+        // Ensure we don't go below used + pending
+        const minRequired = usedDays + pendingDays;
+        const newVacationDays = Math.max(correctVacationDays, minRequired);
+
+        if (Math.abs(currentVacation - newVacationDays) > 0.01) {
+          const diff = newVacationDays - currentVacation;
+
+          await vacationBalance.update({ entitled_days: newVacationDays });
+
+          // Log the change
+          await LeaveEntitlementLog.create({
+            employee_id: employee.id,
+            leave_type_id: vacationType.id,
+            year,
+            days_added: diff,
+            reason: `Rebalance: Tenure-based adjustment (${calculateYearsOfService(joinDate)} years of service)`,
+            created_by: adminId
+          });
+
+          results.changes.push({
+            employeeId: employee.id,
+            employeeName: `${employee.first_name} ${employee.last_name}`,
+            leaveType: vacationType.name,
+            from: currentVacation,
+            to: newVacationDays,
+            diff: diff
+          });
+        }
+      }
+
+      // Set Flex to 3 days for everyone
+      if (flexType) {
+        let correctFlexDays = 3;
+
+        // Apply pro-rata for probation employees
+        if (isProbation && joinDate) {
+          correctFlexDays = calculateProRataEntitlement(3, joinDate, 3);
+        }
+
+        const flexBalance = await getOrCreateBalance(employee.id, flexType.id, year);
+        const currentFlex = parseFloat(flexBalance.entitled_days);
+        const usedDays = parseFloat(flexBalance.used_days);
+        const pendingDays = parseFloat(flexBalance.pending_days);
+
+        // Ensure we don't go below used + pending
+        const minRequired = usedDays + pendingDays;
+        const newFlexDays = Math.max(correctFlexDays, minRequired);
+
+        if (Math.abs(currentFlex - newFlexDays) > 0.01) {
+          const diff = newFlexDays - currentFlex;
+
+          await flexBalance.update({ entitled_days: newFlexDays });
+
+          // Log the change
+          await LeaveEntitlementLog.create({
+            employee_id: employee.id,
+            leave_type_id: flexType.id,
+            year,
+            days_added: diff,
+            reason: 'Rebalance: Flex policy adjustment (3 days for all)',
+            created_by: adminId
+          });
+
+          results.changes.push({
+            employeeId: employee.id,
+            employeeName: `${employee.first_name} ${employee.last_name}`,
+            leaveType: flexType.name,
+            from: currentFlex,
+            to: newFlexDays,
+            diff: diff
+          });
+        }
+      }
+
+      results.processed++;
+    } catch (error) {
+      results.errors.push({
+        employeeId: employee.id,
+        employeeName: `${employee.first_name} ${employee.last_name}`,
+        error: error.message
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Helper function to calculate years of service
+ */
+function calculateYearsOfService(joinDate) {
+  if (!joinDate) return 0;
+
+  const join = new Date(joinDate);
+  const now = new Date();
+  let years = now.getFullYear() - join.getFullYear();
+
+  const thisYearAnniversary = new Date(now.getFullYear(), join.getMonth(), join.getDate());
+  if (now < thisYearAnniversary) {
+    years--;
+  }
+
+  return Math.max(0, years);
 }
 
 /**
@@ -398,6 +588,8 @@ module.exports = {
   addEntitlement,
   removeEntitlement,
   calculateProRataEntitlement,
+  calculateTenureBasedVacation,
+  rebalanceAllEntitlements,
   getPendingRequests,
   getAllRequests,
   getEmployeeRequests,

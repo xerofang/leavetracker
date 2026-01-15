@@ -429,6 +429,35 @@ router.post('/entitlements/remove', async (req, res) => {
   }
 });
 
+// POST /admin/entitlements/rebalance
+router.post('/entitlements/rebalance', async (req, res) => {
+  try {
+    const year = getCurrentYear();
+    const results = await leaveService.rebalanceAllEntitlements(req.session.user.id, year);
+
+    if (results.changes.length === 0) {
+      req.flash('info', `Rebalance complete. All ${results.processed} employees already have correct entitlements.`);
+    } else {
+      const summary = results.changes.map(c =>
+        `${c.employeeName}: ${c.leaveType} ${c.from} → ${c.to} (${c.diff > 0 ? '+' : ''}${c.diff})`
+      ).join(', ');
+
+      req.flash('success', `Rebalance complete! ${results.changes.length} changes made for ${results.processed} employees. Changes: ${summary}`);
+    }
+
+    if (results.errors.length > 0) {
+      req.flash('warning', `${results.errors.length} errors occurred: ${results.errors.map(e => e.employeeName).join(', ')}`);
+    }
+
+    res.redirect('/admin/entitlements');
+
+  } catch (error) {
+    console.error('Rebalance error:', error);
+    req.flash('error', error.message || 'Error rebalancing entitlements');
+    res.redirect('/admin/entitlements');
+  }
+});
+
 // GET /admin/calendar
 router.get('/calendar', async (req, res) => {
   try {

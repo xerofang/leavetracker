@@ -51,6 +51,31 @@
       </div>
     </div>
 
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-warning text-dark">
+        <h6 class="mb-0"><i class="bi bi-arrow-repeat"></i> Rebalance Entitlements</h6>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">Apply company policy to all employees:</p>
+        <ul class="small mb-3">
+          <li><strong>Vacation:</strong> Based on tenure
+            <ul>
+              <li>0-2 years: 7 days</li>
+              <li>2-4 years: 14 days</li>
+              <li>5+ years: 18 days</li>
+            </ul>
+          </li>
+          <li><strong>Flex:</strong> 3 days for everyone</li>
+          <li><em>Probation: Pro-rata applied</em></li>
+        </ul>
+        <form method="POST" action="/admin/entitlements/rebalance" onsubmit="return confirm('This will adjust all employee entitlements based on tenure policy. Continue?')">
+          <button type="submit" class="btn btn-warning w-100">
+            <i class="bi bi-arrow-repeat"></i> Rebalance All
+          </button>
+        </form>
+      </div>
+    </div>
+
     <div class="card shadow-sm">
       <div class="card-header bg-danger text-white">
         <h6 class="mb-0"><i class="bi bi-dash-circle"></i> Remove Entitlement</h6>

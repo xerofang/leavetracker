@@ -5,6 +5,11 @@ const { Op } = require('sequelize');
 // Priority order for consuming leave types (after primary type)
 const LEAVE_TYPE_PRIORITY = ['Casual', 'Sick', 'Flex', 'Unpaid Leave'];
 
+// Leave types that are standalone and should NOT be used in cascade/overflow
+// When these are selected as primary, only check their own balance (no cascade)
+// These are never consumed as overflow from other leave types
+const STANDALONE_LEAVE_TYPES = ['Paid Leave', 'Unpaid Leave'];
+
 /**
  * Get or create leave balance for an employee
  */
@@ -666,6 +671,7 @@ async function getLeavesForCalendar(startDate, endDate, employeeId = null) {
 /**
  * Calculate smart balance consumption across multiple leave types
  * Priority: Primary type -> Casual -> Sick -> Flex -> Unpaid Leave
+ * Note: Standalone types (Paid Leave) don't cascade - they only use their own balance
  * @param {number} employeeId
  * @param {number} primaryLeaveTypeId - The leave type user selected
  * @param {number} totalDays - Total working days requested
@@ -682,10 +688,62 @@ async function calculateSmartBalanceConsumption(employeeId, primaryLeaveTypeId, 
     throw new Error('Invalid leave type selected');
   }
 
-  // Sort types: primary first, then by priority order (excluding Unpaid Leave initially)
+  // Check if primary type is a standalone type (no cascade)
+  const isStandalone = STANDALONE_LEAVE_TYPES.some(
+    name => name.toLowerCase() === primaryType.name.toLowerCase()
+  );
+
+  if (isStandalone) {
+    // Standalone types (like Paid Leave) - no cascade, only check own balance
+    const balanceInfo = balances.find(b => b.leaveType.id === primaryType.id);
+    const available = balanceInfo ? parseFloat(balanceInfo.available) : 0;
+    const daysToConsume = Math.min(totalDays, available);
+    const shortage = totalDays - daysToConsume;
+
+    const breakdown = [];
+    if (daysToConsume > 0) {
+      breakdown.push({
+        leaveTypeId: primaryType.id,
+        leaveTypeName: primaryType.name,
+        days: daysToConsume,
+        isUnpaid: false,
+        available: available
+      });
+    }
+
+    // If shortage, it's an error for standalone types (they don't cascade)
+    if (shortage > 0) {
+      return {
+        breakdown,
+        hasOverflow: false,
+        unpaidDays: 0,
+        totalEntitled: available,
+        totalRequested: totalDays,
+        primaryLeaveType: primaryType.name,
+        insufficientBalance: true,
+        shortage: shortage,
+        error: `Insufficient ${primaryType.name} balance. Available: ${available}, Requested: ${totalDays}`
+      };
+    }
+
+    return {
+      breakdown,
+      hasOverflow: false,
+      unpaidDays: 0,
+      totalEntitled: available,
+      totalRequested: totalDays,
+      primaryLeaveType: primaryType.name
+    };
+  }
+
+  // Regular leave types - cascade through priority order
+  // Build cascade list: primary first, then priority order (excluding standalone types)
   const sortedTypes = [primaryType];
   for (const priorityName of LEAVE_TYPE_PRIORITY) {
     if (priorityName === 'Unpaid Leave') continue; // Handle unpaid separately
+    // Skip standalone types in cascade
+    if (STANDALONE_LEAVE_TYPES.some(s => s.toLowerCase() === priorityName.toLowerCase())) continue;
+
     const type = leaveTypes.find(lt =>
       lt.name.toLowerCase() === priorityName.toLowerCase() && lt.id !== primaryLeaveTypeId
     );

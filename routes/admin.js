@@ -615,6 +615,18 @@ router.get('/api/preview-balance-consumption', async (req, res) => {
       year
     );
 
+    // Check if it's a standalone type with insufficient balance
+    if (consumption.insufficientBalance) {
+      return res.json({
+        success: false,
+        error: consumption.error,
+        insufficientBalance: true,
+        shortage: consumption.shortage,
+        ...consumption,
+        totalDays
+      });
+    }
+
     res.json({
       success: true,
       ...consumption,

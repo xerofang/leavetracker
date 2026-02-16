@@ -171,8 +171,9 @@ async function previewConsumption() {
     document.getElementById('previewLoading').classList.add('d-none');
 
     if (!data.success) {
-      document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger">' + data.error + '</span>';
+      document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> ' + data.error + '</span>';
       document.getElementById('previewPlaceholder').classList.remove('d-none');
+      document.getElementById('submitBtn').disabled = true;
       return;
     }
 

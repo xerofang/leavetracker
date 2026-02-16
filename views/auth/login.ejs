@@ -15,13 +15,17 @@
   .login-logo {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, var(--primary) 0%, oklch(0.4 0.1 260) 100%);
-    border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, #212529 0%, #495057 100%);
+    border-radius: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto var(--space-4);
-    box-shadow: var(--shadow-md);
+    margin: 0 auto 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .login-logo {
+    background: linear-gradient(135deg, #4f6bed 0%, #7c8ff0 100%);
   }
 
   .login-logo i {
@@ -30,15 +34,15 @@
   }
 
   .login-title {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-bold);
+    font-size: 1.5rem;
+    font-weight: 700;
     color: var(--foreground);
-    margin-bottom: var(--space-1);
+    margin-bottom: 0.25rem;
   }
 
   .login-subtitle {
     color: var(--muted-foreground);
-    font-size: var(--text-sm);
+    font-size: 0.875rem;
   }
 
   .login-input-group {
@@ -47,7 +51,7 @@
 
   .login-input-group .input-icon {
     position: absolute;
-    left: var(--space-4);
+    left: 1rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--muted-foreground);
@@ -56,43 +60,43 @@
   }
 
   .login-input-group .form-control {
-    padding-left: var(--space-12);
+    padding-left: 3rem;
     min-height: 52px;
-    font-size: var(--text-base);
+    font-size: 1rem;
   }
 
   .login-btn {
     min-height: 52px;
-    font-size: var(--text-base);
-    font-weight: var(--font-semibold);
+    font-size: 1rem;
+    font-weight: 600;
   }
 
   .login-footer {
     text-align: center;
-    margin-top: var(--space-6);
-    padding-top: var(--space-4);
+    margin-top: 1.5rem;
+    padding-top: 1rem;
     border-top: 1px solid var(--border);
   }
 
   .theme-toggle-login {
     position: fixed;
-    top: var(--space-4);
-    right: var(--space-4);
+    top: 1rem;
+    right: 1rem;
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius-full);
+    border-radius: 9999px;
     width: 44px;
     height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all var(--transition-fast);
-    box-shadow: var(--shadow-sm);
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   }
 
   .theme-toggle-login:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     transform: scale(1.05);
   }
 
@@ -141,7 +145,7 @@
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary w-100 login-btn btn-ripple">
+          <button type="submit" class="btn btn-primary w-100 login-btn">
             <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
           </button>
         </form>
@@ -160,9 +164,9 @@
 <script>
   // Initialize login page theme icons
   document.addEventListener('DOMContentLoaded', function() {
-    const isDark = document.documentElement.classList.contains('dark');
-    const lightIcon = document.getElementById('lightIconLogin');
-    const darkIcon = document.getElementById('darkIconLogin');
+    var isDark = document.documentElement.classList.contains('dark');
+    var lightIcon = document.getElementById('lightIconLogin');
+    var darkIcon = document.getElementById('darkIconLogin');
     if (lightIcon && darkIcon) {
       lightIcon.classList.toggle('d-none', isDark);
       darkIcon.classList.toggle('d-none', !isDark);
@@ -170,12 +174,12 @@
   });
 
   // Override toggleTheme for login page icons
-  const originalToggle = window.toggleTheme;
+  var originalToggle = window.toggleTheme;
   window.toggleTheme = function() {
-    originalToggle();
-    const isDark = document.documentElement.classList.contains('dark');
-    const lightIcon = document.getElementById('lightIconLogin');
-    const darkIcon = document.getElementById('darkIconLogin');
+    if (originalToggle) originalToggle();
+    var isDark = document.documentElement.classList.contains('dark');
+    var lightIcon = document.getElementById('lightIconLogin');
+    var darkIcon = document.getElementById('darkIconLogin');
     if (lightIcon && darkIcon) {
       lightIcon.classList.toggle('d-none', isDark);
       darkIcon.classList.toggle('d-none', !isDark);

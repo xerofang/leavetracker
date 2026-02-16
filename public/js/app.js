@@ -10,26 +10,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 5000);
   });
 
-  // Set minimum date for date inputs to today
-  const dateInputs = document.querySelectorAll('input[type="date"]');
-  const today = new Date().toISOString().split('T')[0];
-  dateInputs.forEach(function(input) {
-    if (input.name === 'start_date') {
-      input.setAttribute('min', today);
-    }
-  });
-
-  // Sync end date minimum with start date
-  const startDateInput = document.getElementById('start_date');
-  const endDateInput = document.getElementById('end_date');
-
-  if (startDateInput && endDateInput) {
-    startDateInput.addEventListener('change', function() {
-      endDateInput.setAttribute('min', this.value);
-      if (endDateInput.value && endDateInput.value < this.value) {
-        endDateInput.value = this.value;
+  // Set minimum date for date inputs to today (except historic import page)
+  const isHistoricImport = window.location.pathname.includes('historic-import');
+  if (!isHistoricImport) {
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    const today = new Date().toISOString().split('T')[0];
+    dateInputs.forEach(function(input) {
+      if (input.name === 'start_date') {
+        input.setAttribute('min', today);
       }
     });
+  }
+
+  // Sync end date minimum with start date (except historic import page which handles its own logic)
+  if (!isHistoricImport) {
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+
+    if (startDateInput && endDateInput) {
+      startDateInput.addEventListener('change', function() {
+        endDateInput.setAttribute('min', this.value);
+        if (endDateInput.value && endDateInput.value < this.value) {
+          endDateInput.value = this.value;
+        }
+      });
+    }
   }
 
   // Form validation

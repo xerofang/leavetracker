@@ -121,7 +121,7 @@
 </div>
 
 <script>
-// Set max date to yesterday for historic imports
+// Set max date to yesterday for historic imports (no min date - allow any past date)
 (function() {
   var today = new Date();
   var yesterday = new Date(today);
@@ -131,14 +131,9 @@
   var startInput = document.getElementById('start_date');
   var endInput = document.getElementById('end_date');
 
-  startInput.max = maxDate;
-  endInput.max = maxDate;
-
-  // Set a reasonable min date (e.g., 5 years ago)
-  var minDate = new Date(today);
-  minDate.setFullYear(minDate.getFullYear() - 5);
-  startInput.min = minDate.toISOString().split('T')[0];
-  endInput.min = minDate.toISOString().split('T')[0];
+  // Only set max date (yesterday) - allow any past dates
+  startInput.setAttribute('max', maxDate);
+  endInput.setAttribute('max', maxDate);
 })();
 
 // Event listeners

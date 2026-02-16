@@ -1,0 +1,553 @@
+/**
+ * Component Overrides - Leave Tracker Design System
+ * Maps Bootstrap components to design tokens
+ * Implements Laws of UX principles
+ */
+
+/* ==================== Base Overrides ==================== */
+
+/* Apply design tokens to body */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  color: var(--foreground);
+  line-height: var(--leading-normal);
+  transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+/* ==================== Bootstrap Variable Mapping ==================== */
+
+:root {
+  /* Map Bootstrap to design tokens */
+  --bs-body-bg: var(--background);
+  --bs-body-color: var(--foreground);
+  --bs-primary: var(--primary);
+  --bs-primary-rgb: 33, 37, 41;
+  --bs-secondary: var(--secondary);
+  --bs-card-bg: var(--card);
+  --bs-border-color: var(--border);
+  --bs-border-radius: var(--radius-md);
+  --bs-border-radius-sm: var(--radius-sm);
+  --bs-border-radius-lg: var(--radius-lg);
+  --bs-link-color: var(--primary);
+}
+
+.dark {
+  --bs-body-bg: var(--background);
+  --bs-body-color: var(--foreground);
+  --bs-card-bg: var(--card);
+  --bs-border-color: var(--border);
+}
+
+/* ==================== Cards ==================== */
+
+.card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.card-body {
+  padding: var(--space-lg);
+}
+
+.card-footer {
+  background: transparent;
+  border-top: 1px solid var(--border);
+  padding: var(--space-md) var(--space-lg);
+}
+
+/* ==================== Buttons (Fitts's Law: 44px min touch target) ==================== */
+
+.btn {
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-medium);
+  font-size: var(--text-sm);
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.btn-lg {
+  min-height: 52px;
+  padding: var(--space-3) var(--space-8);
+  font-size: var(--text-base);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--muted);
+}
+
+.btn-outline-primary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.btn-outline-primary:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.btn-outline-secondary {
+  background: transparent;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+}
+
+.btn-outline-secondary:hover {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.btn-danger {
+  background: var(--destructive);
+  color: white;
+  border: none;
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+  border: none;
+}
+
+.btn-warning {
+  background: var(--warning);
+  color: var(--foreground);
+  border: none;
+}
+
+/* ==================== Form Controls ==================== */
+
+.form-control,
+.form-select {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px oklch(from var(--ring) l c h / 0.15);
+  outline: none;
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-label {
+  font-weight: var(--font-medium);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
+  color: var(--foreground);
+}
+
+.form-text {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+  margin-top: var(--space-1);
+}
+
+.form-check-input {
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.form-check-input:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 3px oklch(from var(--ring) l c h / 0.15);
+}
+
+/* Dark mode inputs */
+.dark .form-control,
+.dark .form-select {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+/* ==================== Tables ==================== */
+
+.table {
+  --bs-table-bg: var(--card);
+  --bs-table-color: var(--foreground);
+  --bs-table-hover-bg: var(--muted);
+  --bs-table-striped-bg: var(--secondary);
+  border-color: var(--border);
+}
+
+.table th {
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  padding: var(--space-3) var(--space-4);
+  background: var(--secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: var(--space-3) var(--space-4);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-hover tbody tr:hover {
+  background: var(--muted);
+}
+
+.table-light {
+  --bs-table-bg: var(--secondary);
+  --bs-table-color: var(--foreground);
+}
+
+/* ==================== Badges ==================== */
+
+.badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  text-transform: capitalize;
+}
+
+.badge.bg-primary {
+  background: var(--primary) !important;
+  color: var(--primary-foreground);
+}
+
+.badge.bg-secondary {
+  background: var(--secondary) !important;
+  color: var(--secondary-foreground);
+}
+
+.badge.bg-success {
+  background: var(--success) !important;
+  color: white;
+}
+
+.badge.bg-danger {
+  background: var(--destructive) !important;
+  color: white;
+}
+
+.badge.bg-warning {
+  background: var(--warning) !important;
+  color: var(--foreground);
+}
+
+.badge.bg-info {
+  background: var(--info) !important;
+  color: white;
+}
+
+.badge.bg-light {
+  background: var(--secondary) !important;
+  color: var(--secondary-foreground);
+}
+
+/* ==================== Alerts ==================== */
+
+.alert {
+  border-radius: var(--radius-md);
+  border: none;
+  padding: var(--space-md);
+  font-size: var(--text-sm);
+}
+
+.alert-success {
+  background: oklch(from var(--success) l c h / 0.15);
+  color: var(--success);
+  border-left: 4px solid var(--success);
+}
+
+.alert-danger {
+  background: oklch(from var(--destructive) l c h / 0.15);
+  color: var(--destructive);
+  border-left: 4px solid var(--destructive);
+}
+
+.alert-warning {
+  background: oklch(from var(--warning) l c h / 0.15);
+  color: oklch(0.5 0.15 70);
+  border-left: 4px solid var(--warning);
+}
+
+.alert-info {
+  background: oklch(from var(--info) l c h / 0.15);
+  color: var(--info);
+  border-left: 4px solid var(--info);
+}
+
+.dark .alert-success {
+  background: oklch(from var(--success) l c h / 0.2);
+}
+
+.dark .alert-danger {
+  background: oklch(from var(--destructive) l c h / 0.2);
+}
+
+.dark .alert-warning {
+  background: oklch(from var(--warning) l c h / 0.2);
+  color: var(--warning);
+}
+
+.dark .alert-info {
+  background: oklch(from var(--info) l c h / 0.2);
+}
+
+/* ==================== Navbar ==================== */
+
+.navbar {
+  padding: var(--space-3) 0;
+  transition: background-color var(--transition-slow);
+}
+
+.navbar-dark {
+  background: var(--primary) !important;
+}
+
+.dark .navbar-dark {
+  background: var(--card) !important;
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar-brand {
+  font-weight: var(--font-semibold);
+  font-size: var(--text-lg);
+}
+
+.nav-link {
+  font-weight: var(--font-medium);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3) !important;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-menu {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
+}
+
+.dropdown-item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--foreground);
+  transition: background-color var(--transition-fast);
+}
+
+.dropdown-item:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.dropdown-divider {
+  border-color: var(--border);
+}
+
+/* ==================== Modals ==================== */
+
+.modal-content {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-lg);
+}
+
+.modal-body {
+  padding: var(--space-lg);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border);
+  padding: var(--space-lg);
+  gap: var(--space-2);
+}
+
+.modal-backdrop {
+  background: oklch(0 0 0 / 0.5);
+}
+
+/* ==================== Progress Bars ==================== */
+
+.progress {
+  height: 8px;
+  background: var(--secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width var(--transition-slow);
+}
+
+/* ==================== Footer ==================== */
+
+.footer {
+  background: var(--secondary);
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  transition: background-color var(--transition-slow);
+}
+
+/* ==================== Utilities ==================== */
+
+/* Text colors */
+.text-muted {
+  color: var(--muted-foreground) !important;
+}
+
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.text-success {
+  color: var(--success) !important;
+}
+
+.text-danger {
+  color: var(--destructive) !important;
+}
+
+.text-warning {
+  color: var(--warning) !important;
+}
+
+/* Background colors */
+.bg-light {
+  background: var(--secondary) !important;
+}
+
+.bg-primary {
+  background: var(--primary) !important;
+}
+
+/* Border utilities */
+.border {
+  border-color: var(--border) !important;
+}
+
+/* Shadow utilities */
+.shadow-sm {
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.shadow {
+  box-shadow: var(--shadow-md) !important;
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* ==================== Accessibility ==================== */
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==================== Scrollbar Styling ==================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
+}

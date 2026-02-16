@@ -1,12 +1,58 @@
 <%- include('../layouts/main', { body: `
 <style>
+  /* Welcome Section */
+  .welcome-section {
+    margin-bottom: var(--space-6);
+  }
+
+  .welcome-title {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--foreground);
+    margin-bottom: var(--space-1);
+  }
+
+  .welcome-subtitle {
+    color: var(--muted-foreground);
+    font-size: var(--text-sm);
+  }
+
+  /* Balance Cards */
+  .balance-card {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .balance-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .balance-value {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    line-height: 1.2;
+  }
+
+  .balance-label {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: var(--font-medium);
+  }
+
   /* Paid Leave Golden Glow Animation */
   .paid-leave-card {
-    background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
-    border: 2px solid #ffc107 !important;
+    background: linear-gradient(135deg, oklch(0.95 0.05 85) 0%, oklch(0.9 0.08 85) 100%);
+    border: 2px solid oklch(0.8 0.15 85) !important;
     position: relative;
     overflow: hidden;
   }
+
+  .dark .paid-leave-card {
+    background: linear-gradient(135deg, oklch(0.3 0.08 85) 0%, oklch(0.25 0.1 85) 100%);
+    border-color: oklch(0.6 0.15 85) !important;
+  }
+
   .paid-leave-card::before {
     content: '';
     position: absolute;
@@ -14,32 +60,42 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.3), transparent);
+    background: linear-gradient(90deg, transparent, oklch(0.9 0.1 85 / 0.4), transparent);
     animation: shine 3s infinite;
   }
+
   @keyframes shine {
     0% { transform: translateX(-100%) rotate(45deg); }
     100% { transform: translateX(200%) rotate(45deg); }
   }
+
   .paid-leave-card .card-body {
     position: relative;
     z-index: 1;
   }
+
   .paid-leave-badge {
-    background: linear-gradient(135deg, #ffc107 0%, #ffdb4d 100%);
-    color: #856404;
+    background: linear-gradient(135deg, oklch(0.8 0.15 85) 0%, oklch(0.85 0.12 85) 100%);
+    color: oklch(0.35 0.1 85);
     font-weight: 600;
     animation: pulse-gold 2s infinite;
   }
-  @keyframes pulse-gold {
-    0%, 100% { box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); }
-    50% { box-shadow: 0 0 15px rgba(255, 193, 7, 0.8); }
+
+  .dark .paid-leave-badge {
+    color: oklch(0.2 0.08 85);
   }
+
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 5px oklch(0.8 0.15 85 / 0.5); }
+    50% { box-shadow: 0 0 15px oklch(0.8 0.15 85 / 0.8); }
+  }
+
   .reward-icon {
-    color: #ffc107;
+    color: oklch(0.75 0.15 85);
     font-size: 1.5rem;
     animation: bounce 2s infinite;
   }
+
   @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-5px); }
@@ -47,128 +103,192 @@
 
   /* Unpaid Leave Styling */
   .unpaid-leave-card {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 2px dashed #6c757d !important;
+    background: linear-gradient(135deg, var(--secondary) 0%, var(--muted) 100%);
+    border: 2px dashed var(--muted-foreground) !important;
   }
+
   .unpaid-badge {
-    background-color: #6c757d;
+    background-color: var(--muted-foreground);
     color: white;
+  }
+
+  /* Section Header */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+  }
+
+  .section-title {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Quick Actions */
+  .quick-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    font-weight: var(--font-semibold);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+  }
+
+  .quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Empty State */
+  .empty-state {
+    padding: var(--space-12) var(--space-6);
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    font-size: 4rem;
+    color: var(--muted-foreground);
+    opacity: 0.5;
+    margin-bottom: var(--space-4);
   }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
-  <a href="/employee/apply" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> Apply for Leave
-  </a>
+<!-- Welcome Section -->
+<div class="welcome-section fade-in">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+      <h1 class="welcome-title">
+        <i class="bi bi-hand-wave me-2" style="color: var(--warning);"></i>
+        Welcome back!
+      </h1>
+      <p class="welcome-subtitle">Here's your leave overview for ${year}</p>
+    </div>
+    <a href="/employee/apply" class="btn btn-primary quick-action-btn">
+      <i class="bi bi-plus-circle"></i> Apply for Leave
+    </a>
+  </div>
 </div>
 
-<div class="row mb-4">
-  <div class="col-12">
-    <h5 class="text-muted mb-3">Leave Balances - ${year}</h5>
-  </div>
-  ${balances.map(b => {
+<!-- Leave Balances -->
+<div class="section-header">
+  <span class="section-title">Your Leave Balances</span>
+</div>
+
+<div class="row mb-5">
+  ${balances.map((b, index) => {
     const isPaidLeave = b.leaveType.name === 'Paid Leave';
     const isUnpaidLeave = b.leaveType.name === 'Unpaid Leave';
     const cardClass = isPaidLeave ? 'paid-leave-card' : (isUnpaidLeave ? 'unpaid-leave-card' : '');
 
     if (isUnpaidLeave) {
-      // Unpaid Leave: Show only "taken" days
-      return `
+      return \`
         <div class="col-md-4 mb-3">
-          <div class="card h-100 border-0 shadow-sm ${cardClass}">
-            <div class="card-body">
+          <div class="card h-100 border-0 shadow-sm balance-card card-enter \${cardClass}" style="animation-delay: \${index * 50}ms">
+            <div class="card-body p-4">
               <div class="d-flex justify-content-between align-items-start">
                 <div>
-                  <h6 class="text-muted mb-1">
-                    <i class="bi bi-calendar-x text-secondary"></i> ${b.leaveType.name}
-                  </h6>
-                  <h3 class="mb-0 text-secondary">${parseFloat(b.balance.used_days).toFixed(1)} <small class="text-muted fs-6">taken</small></h3>
+                  <div class="balance-label mb-2">
+                    <i class="bi bi-calendar-x me-1"></i> \${b.leaveType.name}
+                  </div>
+                  <div class="balance-value text-secondary">\${parseFloat(b.balance.used_days).toFixed(1)}</div>
+                  <small class="text-muted">days taken</small>
                 </div>
                 <div class="text-end">
                   <span class="badge unpaid-badge">Flexible</span>
-                  <br>
-                  <small class="text-muted mt-2 d-block">No salary for these days</small>
+                  <div class="mt-2">
+                    <small class="text-muted d-block">No salary for these</small>
+                  </div>
                 </div>
               </div>
-              ${parseFloat(b.balance.pending_days) > 0 ? `
-                <div class="mt-2">
-                  <span class="badge bg-warning text-dark">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>
+              \${parseFloat(b.balance.pending_days) > 0 ? \`
+                <div class="mt-3 pt-3 border-top">
+                  <span class="badge bg-warning text-dark">Pending: \${parseFloat(b.balance.pending_days).toFixed(1)}</span>
                 </div>
-              ` : ''}
+              \` : ''}
             </div>
           </div>
         </div>
-      `;
+      \`;
     } else if (isPaidLeave) {
-      // Paid Leave: Golden glow with reward styling
-      return `
+      return \`
         <div class="col-md-4 mb-3">
-          <div class="card h-100 border-0 shadow-sm ${cardClass}">
-            <div class="card-body">
+          <div class="card h-100 border-0 shadow-sm balance-card card-enter \${cardClass}" style="animation-delay: \${index * 50}ms">
+            <div class="card-body p-4">
               <div class="d-flex justify-content-between align-items-start">
                 <div>
-                  <h6 class="mb-1">
-                    <i class="bi bi-star-fill reward-icon"></i>
-                    <span class="text-warning fw-bold">${b.leaveType.name}</span>
-                  </h6>
-                  <h3 class="mb-0 text-warning">${b.available.toFixed(1)} <small class="fs-6">days available</small></h3>
+                  <div class="balance-label mb-2">
+                    <i class="bi bi-star-fill reward-icon me-1"></i>
+                    <span style="color: oklch(0.6 0.12 85); font-weight: 600;">\${b.leaveType.name}</span>
+                  </div>
+                  <div class="balance-value" style="color: oklch(0.6 0.12 85);">\${b.available.toFixed(1)}</div>
+                  <small style="color: oklch(0.5 0.1 85);">days available</small>
                 </div>
                 <div class="text-end">
-                  <span class="badge paid-leave-badge"><i class="bi bi-gift"></i> Reward: ${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
-                  <br>
-                  <span class="badge bg-success mt-1">Used: ${parseFloat(b.balance.used_days).toFixed(1)}</span>
-                  ${parseFloat(b.balance.pending_days) > 0 ? `<br><span class="badge bg-warning text-dark mt-1">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>` : ''}
+                  <span class="badge paid-leave-badge"><i class="bi bi-gift me-1"></i> \${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
+                  <div class="mt-2">
+                    <span class="badge bg-success">Used: \${parseFloat(b.balance.used_days).toFixed(1)}</span>
+                  </div>
+                  \${parseFloat(b.balance.pending_days) > 0 ? \`<div class="mt-1"><span class="badge bg-warning text-dark">Pending: \${parseFloat(b.balance.pending_days).toFixed(1)}</span></div>\` : ''}
                 </div>
               </div>
-              <div class="progress mt-3" style="height: 6px; background-color: rgba(255, 193, 7, 0.2);">
-                <div class="progress-bar" style="width: ${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%; background-color: #28a745;"></div>
-                <div class="progress-bar" style="width: ${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%; background-color: #ffc107;"></div>
+              <div class="progress mt-3" style="height: 6px; background-color: oklch(0.85 0.1 85 / 0.3);">
+                <div class="progress-bar" style="width: \${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%; background-color: var(--success);"></div>
+                <div class="progress-bar" style="width: \${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%; background-color: var(--warning);"></div>
               </div>
             </div>
           </div>
         </div>
-      `;
+      \`;
     } else {
-      // Regular leave types
-      return `
+      return \`
         <div class="col-md-4 mb-3">
-          <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
+          <div class="card h-100 border-0 shadow-sm balance-card card-enter" style="animation-delay: \${index * 50}ms">
+            <div class="card-body p-4">
               <div class="d-flex justify-content-between align-items-start">
                 <div>
-                  <h6 class="text-muted mb-1">${b.leaveType.name}</h6>
-                  <h3 class="mb-0">${b.available.toFixed(1)} <small class="text-muted fs-6">days</small></h3>
+                  <div class="balance-label mb-2">\${b.leaveType.name}</div>
+                  <div class="balance-value">\${b.available.toFixed(1)}</div>
+                  <small class="text-muted">days available</small>
                 </div>
                 <div class="text-end">
-                  <span class="badge bg-light text-dark">Entitled: ${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
-                  <br>
-                  <span class="badge bg-success mt-1">Used: ${parseFloat(b.balance.used_days).toFixed(1)}</span>
-                  ${parseFloat(b.balance.pending_days) > 0 ? `<br><span class="badge bg-warning text-dark mt-1">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>` : ''}
+                  <span class="badge bg-light text-dark">Entitled: \${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
+                  <div class="mt-2">
+                    <span class="badge bg-success">Used: \${parseFloat(b.balance.used_days).toFixed(1)}</span>
+                  </div>
+                  \${parseFloat(b.balance.pending_days) > 0 ? \`<div class="mt-1"><span class="badge bg-warning text-dark">Pending: \${parseFloat(b.balance.pending_days).toFixed(1)}</span></div>\` : ''}
                 </div>
               </div>
               <div class="progress mt-3" style="height: 6px;">
-                <div class="progress-bar bg-success" style="width: ${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
-                <div class="progress-bar bg-warning" style="width: ${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
+                <div class="progress-bar bg-success" style="width: \${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
+                <div class="progress-bar bg-warning" style="width: \${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
               </div>
             </div>
           </div>
         </div>
-      `;
+      \`;
     }
   }).join('')}
 </div>
 
-<div class="card shadow-sm">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Requests</h5>
-    <a href="/employee/history" class="btn btn-sm btn-outline-primary">View All</a>
-  </div>
+<!-- Recent Requests -->
+<div class="section-header">
+  <span class="section-title">Recent Requests</span>
+  <a href="/employee/history" class="btn btn-sm btn-outline-secondary">
+    View All <i class="bi bi-arrow-right ms-1"></i>
+  </a>
+</div>
+
+<div class="card shadow-sm fade-in-up" style="animation-delay: 200ms">
   <div class="card-body p-0">
-    ${recentRequests.length > 0 ? `
+    ${recentRequests.length > 0 ? \`
       <div class="table-responsive">
         <table class="table table-hover mb-0">
-          <thead class="table-light">
+          <thead>
             <tr>
               <th>Type</th>
               <th>From</th>
@@ -178,29 +298,31 @@
             </tr>
           </thead>
           <tbody>
-            ${recentRequests.map(r => `
+            \${recentRequests.map(r => \`
               <tr>
-                <td>${r.leaveType.name}</td>
-                <td>${formatDate(r.start_date)}</td>
-                <td>${formatDate(r.end_date)}</td>
-                <td>${r.total_days}</td>
+                <td class="fw-medium">\${r.leaveType.name}</td>
+                <td>\${formatDate(r.start_date)}</td>
+                <td>\${formatDate(r.end_date)}</td>
+                <td><span class="badge bg-light text-dark">\${r.total_days}</span></td>
                 <td>
-                  <span class="badge bg-${r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : r.status === 'cancelled' ? 'secondary' : 'warning'}">
-                    ${r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                  <span class="badge bg-\${r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : r.status === 'cancelled' ? 'secondary' : 'warning'}">
+                    \${r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                   </span>
                 </td>
               </tr>
-            `).join('')}
+            \`).join('')}
           </tbody>
         </table>
       </div>
-    ` : `
-      <div class="text-center py-5 text-muted">
-        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-        <p class="mt-2">No leave requests yet</p>
-        <a href="/employee/apply" class="btn btn-primary btn-sm">Apply for Leave</a>
+    \` : \`
+      <div class="empty-state">
+        <i class="bi bi-inbox empty-state-icon"></i>
+        <p class="text-muted mb-3">No leave requests yet</p>
+        <a href="/employee/apply" class="btn btn-primary">
+          <i class="bi bi-plus-circle me-2"></i> Apply for Leave
+        </a>
       </div>
-    `}
+    \`}
   </div>
 </div>
 ` }) %>

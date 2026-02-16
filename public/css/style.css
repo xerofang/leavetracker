@@ -1,186 +1,334 @@
-/* Custom styles for Leave Tracker */
+/* Leave Tracker - Custom Styles
+ * This file contains app-specific styles that build on top of the design system.
+ * Design tokens are defined in design-tokens.css
+ * Component overrides are in components.css
+ */
 
-/* Body and layout */
+/* ==================== Layout ==================== */
+
 body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f8f9fa;
 }
 
 main {
   flex: 1;
 }
 
-/* Navbar customization */
+/* ==================== Navbar Enhancements ==================== */
+
 .navbar-brand {
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
-.nav-link {
-  padding: 0.5rem 1rem !important;
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
 }
 
-/* Cards */
-.card {
-  border: none;
-  border-radius: 0.5rem;
-}
+/* ==================== Table Enhancements ==================== */
 
-.card-header {
-  border-radius: 0.5rem 0.5rem 0 0 !important;
-  font-weight: 600;
-}
-
-/* Tables */
 .table {
   margin-bottom: 0;
 }
 
 .table th {
-  font-weight: 600;
   white-space: nowrap;
 }
 
-.table-hover tbody tr:hover {
-  background-color: rgba(0, 123, 255, 0.05);
-}
+/* ==================== Calendar (FullCalendar) ==================== */
 
-/* Badges */
-.badge {
-  font-weight: 500;
-}
-
-/* Buttons */
-.btn {
-  border-radius: 0.375rem;
-}
-
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-}
-
-/* Forms */
-.form-control:focus,
-.form-select:focus {
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-}
-
-/* Progress bars */
-.progress {
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-/* Alerts */
-.alert {
-  border: none;
-  border-radius: 0.5rem;
-}
-
-/* Stats cards */
-.card.bg-primary,
-.card.bg-success,
-.card.bg-warning,
-.card.bg-info {
-  border-radius: 0.75rem;
-}
-
-/* Calendar customization */
 #calendar {
   max-width: 100%;
 }
 
 .fc .fc-button-primary {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  background-color: var(--primary);
+  border-color: var(--primary);
 }
 
 .fc .fc-button-primary:hover {
-  background-color: #0b5ed7;
-  border-color: #0a58ca;
+  filter: brightness(1.1);
 }
 
 .fc .fc-button-primary:disabled {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  background-color: var(--primary);
+  border-color: var(--primary);
+  opacity: 0.6;
 }
 
 .fc-event {
   cursor: pointer;
   font-size: 0.85em;
   padding: 2px 4px;
+  border-radius: var(--radius-sm);
 }
 
-/* Responsive adjustments */
+.dark .fc {
+  --fc-page-bg-color: var(--background);
+  --fc-neutral-bg-color: var(--secondary);
+  --fc-border-color: var(--border);
+  --fc-button-bg-color: var(--primary);
+  --fc-button-border-color: var(--primary);
+  --fc-today-bg-color: oklch(from var(--primary) l c h / 0.1);
+}
+
+.dark .fc-theme-standard td,
+.dark .fc-theme-standard th {
+  border-color: var(--border);
+}
+
+.dark .fc-col-header-cell {
+  background: var(--secondary);
+}
+
+/* ==================== Multi-select ==================== */
+
+select[multiple] {
+  height: auto;
+  min-height: 120px;
+}
+
+/* ==================== Responsive ==================== */
+
 @media (max-width: 768px) {
   .table-responsive {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
   }
 
   .card-body {
-    padding: 1rem;
+    padding: var(--space-4);
   }
 
   .btn-group-sm > .btn {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.75rem;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+  }
+
+  /* Stack action buttons on mobile */
+  .d-md-flex.justify-content-md-end {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .d-md-flex.justify-content-md-end .btn {
+    width: 100%;
   }
 }
 
-/* Login page */
-.card.shadow {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
-}
+/* ==================== Print Styles ==================== */
 
-/* Footer */
-.footer {
-  margin-top: auto;
-}
-
-/* Dropdown menu */
-.dropdown-menu {
-  border: none;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-/* Status badges */
-.badge.bg-warning {
-  color: #000 !important;
-}
-
-/* Modal */
-.modal-content {
-  border: none;
-  border-radius: 0.5rem;
-}
-
-/* Loading state */
-.btn:disabled {
-  cursor: not-allowed;
-}
-
-/* Empty state */
-.text-muted i {
-  opacity: 0.5;
-}
-
-/* Multiselect */
-select[multiple] {
-  height: auto;
-}
-
-/* Print styles */
 @media print {
   .navbar,
   .btn,
-  footer {
+  footer,
+  .theme-toggle-login {
     display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
   }
 
   .card {
     border: 1px solid #ddd !important;
     box-shadow: none !important;
   }
+
+  .badge {
+    border: 1px solid currentColor;
+  }
+}
+
+/* ==================== Custom Leave Type Styles ==================== */
+
+/* Casual Leave - Blue theme */
+.leave-type-casual {
+  --leave-color: oklch(0.6 0.2 250);
+}
+
+/* Sick Leave - Red/Orange theme */
+.leave-type-sick {
+  --leave-color: oklch(0.6 0.2 30);
+}
+
+/* Flex Leave - Purple theme */
+.leave-type-flex {
+  --leave-color: oklch(0.6 0.2 300);
+}
+
+/* ==================== Status Colors ==================== */
+
+.status-pending {
+  background: oklch(from var(--warning) l c h / 0.15);
+  color: oklch(0.5 0.15 70);
+  border: 1px solid oklch(from var(--warning) l c h / 0.3);
+}
+
+.status-approved {
+  background: oklch(from var(--success) l c h / 0.15);
+  color: var(--success);
+  border: 1px solid oklch(from var(--success) l c h / 0.3);
+}
+
+.status-rejected {
+  background: oklch(from var(--destructive) l c h / 0.15);
+  color: var(--destructive);
+  border: 1px solid oklch(from var(--destructive) l c h / 0.3);
+}
+
+.status-cancelled {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+}
+
+/* ==================== Data Visualization ==================== */
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.05));
+  pointer-events: none;
+}
+
+.stat-value {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-trend {
+  font-size: var(--text-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stat-trend.up {
+  color: var(--success);
+}
+
+.stat-trend.down {
+  color: var(--destructive);
+}
+
+/* ==================== Form Enhancements ==================== */
+
+.form-floating > .form-control,
+.form-floating > .form-select {
+  min-height: 56px;
+}
+
+.required-field::after {
+  content: ' *';
+  color: var(--destructive);
+}
+
+/* ==================== Action Buttons ==================== */
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.action-btn-group {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* ==================== Avatar ==================== */
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-semibold);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: var(--text-xs);
+}
+
+.avatar-lg {
+  width: 56px;
+  height: 56px;
+  font-size: var(--text-lg);
+}
+
+/* ==================== Tooltip Enhancements ==================== */
+
+.tooltip-inner {
+  background: var(--foreground);
+  color: var(--background);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+.dark .tooltip-inner {
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+/* ==================== Loading States ==================== */
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: oklch(from var(--background) l c h / 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: inherit;
+}
+
+.btn.loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }

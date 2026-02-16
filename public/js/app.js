@@ -1,6 +1,50 @@
 // Leave Tracker - Main JavaScript
 
+// ==================== Theme Management ====================
+
+/**
+ * Toggle between light and dark theme
+ */
+function toggleTheme() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  updateThemeIcons(isDark);
+}
+
+/**
+ * Update theme toggle icons based on current theme
+ */
+function updateThemeIcons(isDark) {
+  const lightIcon = document.getElementById('lightIcon');
+  const darkIcon = document.getElementById('darkIcon');
+
+  if (lightIcon && darkIcon) {
+    lightIcon.classList.toggle('d-none', isDark);
+    darkIcon.classList.toggle('d-none', !isDark);
+  }
+}
+
+/**
+ * Initialize theme on page load
+ */
+function initializeTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  updateThemeIcons(isDark);
+
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem('theme')) {
+      document.documentElement.classList.toggle('dark', e.matches);
+      updateThemeIcons(e.matches);
+    }
+  });
+}
+
+// ==================== Main Initialization ====================
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize theme
+  initializeTheme();
   // Auto-dismiss alerts after 5 seconds
   const alerts = document.querySelectorAll('.alert-dismissible');
   alerts.forEach(function(alert) {

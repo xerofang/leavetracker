@@ -1,41 +1,185 @@
 <%- include('../layouts/main', { body: `
-<div class="row justify-content-center mt-5">
-  <div class="col-md-5 col-lg-4">
-    <div class="card shadow">
-      <div class="card-body p-4">
-        <div class="text-center mb-4">
-          <i class="bi bi-calendar-check text-primary" style="font-size: 3rem;"></i>
-          <h3 class="mt-2">${companyName}</h3>
-          <p class="text-muted">Leave Tracker</p>
+<style>
+  .login-container {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .login-logo {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--primary) 0%, oklch(0.4 0.1 260) 100%);
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-4);
+    box-shadow: var(--shadow-md);
+  }
+
+  .login-logo i {
+    font-size: 2rem;
+    color: white;
+  }
+
+  .login-title {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--foreground);
+    margin-bottom: var(--space-1);
+  }
+
+  .login-subtitle {
+    color: var(--muted-foreground);
+    font-size: var(--text-sm);
+  }
+
+  .login-input-group {
+    position: relative;
+  }
+
+  .login-input-group .input-icon {
+    position: absolute;
+    left: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-foreground);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .login-input-group .form-control {
+    padding-left: var(--space-12);
+    min-height: 52px;
+    font-size: var(--text-base);
+  }
+
+  .login-btn {
+    min-height: 52px;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+  }
+
+  .login-footer {
+    text-align: center;
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+
+  .theme-toggle-login {
+    position: fixed;
+    top: var(--space-4);
+    right: var(--space-4);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .theme-toggle-login:hover {
+    box-shadow: var(--shadow-md);
+    transform: scale(1.05);
+  }
+
+  .theme-toggle-login i {
+    color: var(--foreground);
+    font-size: 1.25rem;
+  }
+</style>
+
+<!-- Theme toggle for login page -->
+<button class="theme-toggle-login" onclick="toggleTheme()" title="Toggle theme">
+  <i class="bi bi-sun-fill" id="lightIconLogin"></i>
+  <i class="bi bi-moon-fill d-none" id="darkIconLogin"></i>
+</button>
+
+<div class="login-container">
+  <div class="login-card">
+    <div class="card shadow-lg fade-in-up">
+      <div class="card-body p-5">
+        <!-- Logo & Title -->
+        <div class="text-center mb-5">
+          <div class="login-logo">
+            <i class="bi bi-calendar-check"></i>
+          </div>
+          <h1 class="login-title">${companyName}</h1>
+          <p class="login-subtitle">Leave Management System</p>
         </div>
 
+        <!-- Login Form -->
         <form method="POST" action="/login">
-          <div class="mb-3">
+          <div class="mb-4">
             <label for="email" class="form-label">Email Address</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-              <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required autofocus>
+            <div class="login-input-group">
+              <i class="bi bi-envelope input-icon"></i>
+              <input type="email" class="form-control" id="email" name="email"
+                placeholder="you@company.com" required autofocus autocomplete="email">
             </div>
           </div>
 
           <div class="mb-4">
             <label for="password" class="form-label">Password</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-lock"></i></span>
-              <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+            <div class="login-input-group">
+              <i class="bi bi-lock input-icon"></i>
+              <input type="password" class="form-control" id="password" name="password"
+                placeholder="Enter your password" required autocomplete="current-password">
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-box-arrow-in-right"></i> Login
+          <button type="submit" class="btn btn-primary w-100 login-btn btn-ripple">
+            <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
           </button>
         </form>
-      </div>
-    </div>
 
-    <div class="text-center mt-3 text-muted">
-      <small>Contact HR if you forgot your password</small>
+        <!-- Footer -->
+        <div class="login-footer">
+          <p class="text-muted mb-0">
+            <small><i class="bi bi-question-circle me-1"></i> Forgot password? Contact HR</small>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<script>
+  // Initialize login page theme icons
+  document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const lightIcon = document.getElementById('lightIconLogin');
+    const darkIcon = document.getElementById('darkIconLogin');
+    if (lightIcon && darkIcon) {
+      lightIcon.classList.toggle('d-none', isDark);
+      darkIcon.classList.toggle('d-none', !isDark);
+    }
+  });
+
+  // Override toggleTheme for login page icons
+  const originalToggle = window.toggleTheme;
+  window.toggleTheme = function() {
+    originalToggle();
+    const isDark = document.documentElement.classList.contains('dark');
+    const lightIcon = document.getElementById('lightIconLogin');
+    const darkIcon = document.getElementById('darkIconLogin');
+    if (lightIcon && darkIcon) {
+      lightIcon.classList.toggle('d-none', isDark);
+      darkIcon.classList.toggle('d-none', !isDark);
+    }
+  };
+</script>
 ` }) %>

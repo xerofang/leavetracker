@@ -666,14 +666,15 @@ router.post('/historic-import', async (req, res) => {
   try {
     const { employee_id, leave_type_id, start_date, end_date, reason, confirmed_breakdown } = req.body;
 
-    // Validate dates are in the past
+    // Validate start date is in the past (historic leave must have started already)
+    // End date can be past or future (for ongoing leaves)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const endDateObj = new Date(end_date);
-    endDateObj.setHours(0, 0, 0, 0);
+    const startDateObj = new Date(start_date);
+    startDateObj.setHours(0, 0, 0, 0);
 
-    if (endDateObj >= today) {
-      req.flash('error', 'Historic leave must have end date in the past. For future leaves, use "Apply on Behalf".');
+    if (startDateObj >= today) {
+      req.flash('error', 'Historic leave must have start date in the past. For future leaves, use "Apply on Behalf".');
       return res.redirect('/admin/historic-import');
     }
 

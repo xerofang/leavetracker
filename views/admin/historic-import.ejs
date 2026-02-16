@@ -121,7 +121,9 @@
 </div>
 
 <script>
-// Set max date to yesterday for historic imports (no min date - allow any past date)
+// Set date constraints for historic imports
+// Start date: must be in the past (max = yesterday)
+// End date: can be any date (past or future) - for leaves that started in past but extend to future
 (function() {
   var today = new Date();
   var yesterday = new Date(today);
@@ -129,11 +131,10 @@
   var maxDate = yesterday.toISOString().split('T')[0];
 
   var startInput = document.getElementById('start_date');
-  var endInput = document.getElementById('end_date');
 
-  // Only set max date (yesterday) - allow any past dates
+  // Only start date is restricted to past dates
   startInput.setAttribute('max', maxDate);
-  endInput.setAttribute('max', maxDate);
+  // End date has no max restriction - can extend into future
 })();
 
 // Event listeners

@@ -144,14 +144,14 @@
               return '<div class="col-md-4"><div class="balance-card unpaid-leave-card p-3 rounded text-center">' +
                 '<div class="balance-icon"><i class="bi bi-cash-stack"></i></div>' +
                 '<div class="balance-name">' + b.leaveType.name + '</div>' +
-                '<div class="balance-value">' + b.used_days.toFixed(1) + ' taken</div>' +
+                '<div class="balance-value">' + parseFloat(b.balance.used_days).toFixed(1) + ' taken</div>' +
                 '<small class="text-muted">Unlimited (affects salary)</small>' +
               '</div></div>';
             } else {
               return '<div class="col-md-4"><div class="balance-card p-3 rounded text-center">' +
                 '<div class="balance-name">' + b.leaveType.name + '</div>' +
                 '<div class="balance-value">' + b.available.toFixed(1) + ' days</div>' +
-                '<small class="text-muted">of ' + b.entitled_days.toFixed(1) + ' entitled</small>' +
+                '<small class="text-muted">of ' + parseFloat(b.balance.entitled_days).toFixed(1) + ' entitled</small>' +
               '</div></div>';
             }
           }).join('')}

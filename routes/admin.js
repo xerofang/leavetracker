@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
-const { Employee, LeaveType, LeaveRequest, LeaveBalance } = require('../models');
+const { Employee, LeaveType, LeaveRequest, LeaveBalance, Holiday } = require('../models');
 const leaveService = require('../services/leaveService');
+const holidayService = require('../services/holidayService');
 const notificationService = require('../services/notificationService');
 const reportService = require('../services/reportService');
 const { generateDefaultPassword } = require('../utils/passwordUtils');
@@ -87,7 +88,7 @@ router.get('/employees/add', (req, res) => {
 // POST /admin/employees/add
 router.post('/employees/add', async (req, res) => {
   try {
-    const { employee_id, email, first_name, last_name, department, role, join_date, emp_status, leave_year_start, slack_user_id } = req.body;
+    const { employee_id, email, first_name, last_name, department, role, join_date, emp_status, leave_year_start, slack_user_id, country } = req.body;
 
     const existing = await Employee.findOne({ where: { email: email.toLowerCase() } });
     if (existing) {
@@ -108,7 +109,8 @@ router.post('/employees/add', async (req, res) => {
       role: role || 'employee',
       is_active: true,
       leave_year_start: leave_year_start || null,
-      slack_user_id: slack_user_id || null
+      slack_user_id: slack_user_id || null,
+      country: country || 'IN'
     });
 
     // Create initial leave balances
@@ -178,7 +180,7 @@ router.post('/employees/edit/:id', async (req, res) => {
       return res.redirect('/admin/employees');
     }
 
-    const { employee_id, first_name, last_name, department, role, is_active, reset_password, join_date, emp_status, leave_year_start, slack_user_id } = req.body;
+    const { employee_id, first_name, last_name, department, role, is_active, reset_password, join_date, emp_status, leave_year_start, slack_user_id, country } = req.body;
 
     const updateData = {
       employee_id: employee_id || employee.employee_id,
@@ -190,7 +192,8 @@ router.post('/employees/edit/:id', async (req, res) => {
       role: role || 'employee',
       is_active: is_active === 'on' || is_active === 'true',
       leave_year_start: leave_year_start || employee.leave_year_start,
-      slack_user_id: slack_user_id || null
+      slack_user_id: slack_user_id || null,
+      country: country || 'IN'
     };
 
     if (reset_password === 'on') {
@@ -746,6 +749,179 @@ router.post('/apply-behalf-smart', async (req, res) => {
     console.error('Apply behalf smart error:', error);
     req.flash('error', error.message || 'Error creating leave request');
     res.redirect('/admin/apply-behalf');
+  }
+});
+
+// ==================== HOLIDAY MANAGEMENT ====================
+
+// GET /admin/holidays - List all holidays
+router.get('/holidays', async (req, res) => {
+  try {
+    const { year, country } = req.query;
+    const currentYear = parseInt(process.env.CURRENT_YEAR) || new Date().getFullYear();
+
+    // Get filters
+    const filters = {};
+    if (year) filters.year = parseInt(year);
+    if (country) filters.country = country;
+
+    const holidays = await holidayService.getAllHolidays(filters);
+    const availableYears = await holidayService.getAvailableYears();
+
+    // Add current year if not in list
+    if (!availableYears.includes(currentYear)) {
+      availableYears.unshift(currentYear);
+    }
+
+    // Group holidays by month for display
+    const holidaysByMonth = {};
+    holidays.forEach(holiday => {
+      const date = new Date(holiday.date);
+      const monthKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      if (!holidaysByMonth[monthKey]) {
+        holidaysByMonth[monthKey] = [];
+      }
+      holidaysByMonth[monthKey].push(holiday);
+    });
+
+    res.render('admin/holidays', {
+      title: 'Manage Holidays',
+      holidays,
+      holidaysByMonth,
+      availableYears,
+      selectedYear: year || '',
+      selectedCountry: country || '',
+      countryNames: holidayService.COUNTRY_NAMES,
+      formatDate
+    });
+  } catch (error) {
+    console.error('Holiday list error:', error);
+    req.flash('error', 'Error loading holidays');
+    res.redirect('/admin/dashboard');
+  }
+});
+
+// GET /admin/holidays/add - Show add holiday form
+router.get('/holidays/add', (req, res) => {
+  res.render('admin/holiday-form', {
+    title: 'Add Holiday',
+    holiday: null,
+    countryNames: holidayService.COUNTRY_NAMES
+  });
+});
+
+// POST /admin/holidays/add - Create new holiday
+router.post('/holidays/add', async (req, res) => {
+  try {
+    const { name, date, country, description } = req.body;
+
+    await holidayService.createHoliday({
+      name,
+      date,
+      country,
+      description
+    });
+
+    req.flash('success', `Holiday "${name}" added successfully`);
+    res.redirect('/admin/holidays');
+  } catch (error) {
+    console.error('Add holiday error:', error);
+    req.flash('error', error.message || 'Error adding holiday');
+    res.redirect('/admin/holidays/add');
+  }
+});
+
+// GET /admin/holidays/edit/:id - Show edit holiday form
+router.get('/holidays/edit/:id', async (req, res) => {
+  try {
+    const holiday = await holidayService.getHolidayById(req.params.id);
+
+    if (!holiday) {
+      req.flash('error', 'Holiday not found');
+      return res.redirect('/admin/holidays');
+    }
+
+    res.render('admin/holiday-form', {
+      title: 'Edit Holiday',
+      holiday,
+      countryNames: holidayService.COUNTRY_NAMES
+    });
+  } catch (error) {
+    console.error('Edit holiday error:', error);
+    req.flash('error', 'Error loading holiday');
+    res.redirect('/admin/holidays');
+  }
+});
+
+// POST /admin/holidays/edit/:id - Update holiday
+router.post('/holidays/edit/:id', async (req, res) => {
+  try {
+    const { name, date, country, description, is_active } = req.body;
+
+    await holidayService.updateHoliday(req.params.id, {
+      name,
+      date,
+      country,
+      description,
+      is_active: is_active === 'on'
+    });
+
+    req.flash('success', `Holiday "${name}" updated successfully`);
+    res.redirect('/admin/holidays');
+  } catch (error) {
+    console.error('Update holiday error:', error);
+    req.flash('error', error.message || 'Error updating holiday');
+    res.redirect(`/admin/holidays/edit/${req.params.id}`);
+  }
+});
+
+// POST /admin/holidays/delete/:id - Delete holiday
+router.post('/holidays/delete/:id', async (req, res) => {
+  try {
+    const holiday = await holidayService.getHolidayById(req.params.id);
+    const holidayName = holiday ? holiday.name : 'Holiday';
+
+    await holidayService.deleteHoliday(req.params.id);
+
+    req.flash('success', `Holiday "${holidayName}" deleted`);
+    res.redirect('/admin/holidays');
+  } catch (error) {
+    console.error('Delete holiday error:', error);
+    req.flash('error', error.message || 'Error deleting holiday');
+    res.redirect('/admin/holidays');
+  }
+});
+
+// GET /admin/api/holidays - API endpoint for calendar/frontend
+router.get('/api/holidays', async (req, res) => {
+  try {
+    const { year, country } = req.query;
+    const filters = {};
+    if (year) filters.year = parseInt(year);
+    if (country) filters.country = country;
+
+    const holidays = await holidayService.getAllHolidays(filters);
+    res.json({ success: true, holidays });
+  } catch (error) {
+    console.error('API holidays error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /admin/holidays/test-notification - Test holiday notification (manual trigger)
+router.post('/holidays/test-notification', async (req, res) => {
+  try {
+    const result = await holidayService.sendHolidayNotifications();
+    if (result.sent > 0) {
+      req.flash('success', `Sent ${result.sent} holiday notification(s) to Slack`);
+    } else {
+      req.flash('info', 'No holidays tomorrow to notify about');
+    }
+    res.redirect('/admin/holidays');
+  } catch (error) {
+    console.error('Test notification error:', error);
+    req.flash('error', 'Error sending test notification: ' + error.message);
+    res.redirect('/admin/holidays');
   }
 });
 

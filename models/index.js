@@ -23,6 +23,7 @@ const LeaveType = require('./LeaveType')(sequelize);
 const LeaveBalance = require('./LeaveBalance')(sequelize);
 const LeaveRequest = require('./LeaveRequest')(sequelize);
 const LeaveEntitlementLog = require('./LeaveEntitlementLog')(sequelize);
+const Holiday = require('./Holiday')(sequelize);
 
 // Define associations
 Employee.hasMany(LeaveBalance, { foreignKey: 'employee_id', as: 'balances' });
@@ -59,5 +60,6 @@ module.exports = {
   LeaveType,
   LeaveBalance,
   LeaveRequest,
-  LeaveEntitlementLog
+  LeaveEntitlementLog,
+  Holiday
 };

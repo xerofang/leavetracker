@@ -75,6 +75,14 @@
                 value="${employee && employee.slack_user_id ? employee.slack_user_id : ''}" placeholder="e.g., U1234567890">
               <div class="form-text">For @ mentions in Slack notifications. Find in Slack: Profile > ... > Copy member ID</div>
             </div>
+            <div class="col-md-6">
+              <label for="country" class="form-label">Country</label>
+              <select class="form-select" id="country" name="country">
+                <option value="IN" ${!employee || employee.country === 'IN' ? 'selected' : ''}>India</option>
+                <option value="US" ${employee && employee.country === 'US' ? 'selected' : ''}>United States</option>
+              </select>
+              <div class="form-text">Used for public holiday notifications</div>
+            </div>
           </div>
 
           ${isEdit ? `

@@ -61,6 +61,12 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(20),
       allowNull: true,
       comment: 'Slack member ID for @ mentions (e.g., U1234567890)'
+    },
+    country: {
+      type: DataTypes.ENUM('IN', 'US'),
+      allowNull: true,
+      defaultValue: 'IN',
+      comment: 'Employee country for holiday notifications (IN=India, US=United States)'
     }
   }, {
     tableName: 'employees',

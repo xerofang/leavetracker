@@ -1,0 +1,89 @@
+<%- include('../layouts/main', { body: `
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-calendar-heart"></i>
+          ${holiday ? 'Edit Holiday' : 'Add Holiday'}
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="${holiday ? '/admin/holidays/edit/' + holiday.id : '/admin/holidays/add'}">
+          <div class="mb-3">
+            <label for="name" class="form-label">Holiday Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name"
+              value="${holiday ? holiday.name : ''}"
+              placeholder="e.g., Diwali, Independence Day"
+              required>
+          </div>
+
+          <div class="mb-3">
+            <label for="date" class="form-label">Date <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="date" name="date"
+              value="${holiday ? holiday.date : ''}"
+              required>
+          </div>
+
+          <div class="mb-3">
+            <label for="country" class="form-label">Country <span class="text-danger">*</span></label>
+            <select class="form-select" id="country" name="country" required>
+              <option value="">Select country...</option>
+              <option value="IN"${holiday && holiday.country === 'IN' ? ' selected' : ''}>India</option>
+              <option value="US"${holiday && holiday.country === 'US' ? ' selected' : ''}>United States</option>
+            </select>
+            <small class="text-muted">Holiday notifications are sent based on employee country assignment</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3"
+              placeholder="Brief description of the holiday (optional)">${holiday && holiday.description ? holiday.description : ''}</textarea>
+          </div>
+
+          ${holiday ? '<div class="mb-3"><div class="form-check"><input type="checkbox" class="form-check-input" id="is_active" name="is_active"' + (holiday.is_active ? ' checked' : '') + '><label class="form-check-label" for="is_active">Active</label></div><small class="text-muted">Inactive holidays will not trigger notifications</small></div>' : ''}
+
+          <hr class="my-4">
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="/admin/holidays" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle"></i>
+              ${holiday ? 'Update Holiday' : 'Add Holiday'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Quick Reference -->
+    <div class="card mt-4 bg-light">
+      <div class="card-body">
+        <h6 class="card-title"><i class="bi bi-lightbulb"></i> Quick Reference</h6>
+        <div class="row">
+          <div class="col-md-6">
+            <strong>India (IN) Holidays:</strong>
+            <ul class="small mb-0">
+              <li>Republic Day - Jan 26</li>
+              <li>Independence Day - Aug 15</li>
+              <li>Gandhi Jayanti - Oct 2</li>
+              <li>Diwali - varies</li>
+              <li>Holi - varies</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <strong>US Holidays:</strong>
+            <ul class="small mb-0">
+              <li>New Year's Day - Jan 1</li>
+              <li>Independence Day - Jul 4</li>
+              <li>Thanksgiving - 4th Thu Nov</li>
+              <li>Christmas - Dec 25</li>
+              <li>Memorial Day - last Mon May</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+` }) %>

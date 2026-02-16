@@ -1,0 +1,117 @@
+<%- include('../layouts/main', { body: `
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-calendar-heart"></i> Public Holidays</h2>
+      <p class="text-muted mb-0">Manage public holidays for India and United States</p>
+    </div>
+    <div>
+      <form method="POST" action="/admin/holidays/test-notification" class="d-inline">
+        <button type="submit" class="btn btn-outline-primary me-2" title="Test notification for tomorrow's holidays">
+          <i class="bi bi-bell"></i> Test Notification
+        </button>
+      </form>
+      <a href="/admin/holidays/add" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Holiday
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="GET" action="/admin/holidays" class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Year</label>
+          <select name="year" class="form-select">
+            <option value="">All Years</option>
+            ${availableYears.map(y => '<option value="' + y + '"' + (selectedYear == y ? ' selected' : '') + '>' + y + '</option>').join('')}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Country</label>
+          <select name="country" class="form-select">
+            <option value="">All Countries</option>
+            <option value="IN"${selectedCountry === 'IN' ? ' selected' : ''}>India</option>
+            <option value="US"${selectedCountry === 'US' ? ' selected' : ''}>United States</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-secondary">
+            <i class="bi bi-funnel"></i> Filter
+          </button>
+          <a href="/admin/holidays" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> Clear
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Holiday List -->
+  ${holidays.length === 0 ? '<div class="alert alert-info"><i class="bi bi-info-circle"></i> No holidays found. <a href="/admin/holidays/add">Add your first holiday</a>.</div>' : ''}
+
+  ${Object.keys(holidaysByMonth).map(function(month) {
+    return '<div class="card mb-3">' +
+      '<div class="card-header bg-light">' +
+        '<strong><i class="bi bi-calendar-month"></i> ' + month + '</strong>' +
+        '<span class="badge bg-secondary ms-2">' + holidaysByMonth[month].length + ' holiday(s)</span>' +
+      '</div>' +
+      '<div class="card-body p-0">' +
+        '<table class="table table-hover mb-0">' +
+          '<thead class="table-light">' +
+            '<tr>' +
+              '<th style="width: 30%">Holiday Name</th>' +
+              '<th style="width: 20%">Date</th>' +
+              '<th style="width: 15%">Country</th>' +
+              '<th style="width: 25%">Description</th>' +
+              '<th style="width: 10%" class="text-end">Actions</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody>' +
+            holidaysByMonth[month].map(function(h) {
+              var countryBadge = h.country === 'IN'
+                ? '<span class="badge bg-success">India</span>'
+                : '<span class="badge bg-primary">United States</span>';
+              var dateFormatted = formatDate(h.date);
+              var dayOfWeek = new Date(h.date).toLocaleDateString('en-US', { weekday: 'short' });
+              return '<tr' + (!h.is_active ? ' class="table-secondary"' : '') + '>' +
+                '<td>' +
+                  '<strong>' + h.name + '</strong>' +
+                  (!h.is_active ? ' <span class="badge bg-warning text-dark">Inactive</span>' : '') +
+                '</td>' +
+                '<td>' + dayOfWeek + ', ' + dateFormatted + '</td>' +
+                '<td>' + countryBadge + '</td>' +
+                '<td class="text-muted">' + (h.description || '-') + '</td>' +
+                '<td class="text-end">' +
+                  '<a href="/admin/holidays/edit/' + h.id + '" class="btn btn-sm btn-outline-primary" title="Edit">' +
+                    '<i class="bi bi-pencil"></i>' +
+                  '</a> ' +
+                  '<form method="POST" action="/admin/holidays/delete/' + h.id + '" class="d-inline" onsubmit="return confirm(' + "'Are you sure you want to delete this holiday?'" + ')">' +
+                    '<button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">' +
+                      '<i class="bi bi-trash"></i>' +
+                    '</button>' +
+                  '</form>' +
+                '</td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+  }).join('')}
+
+  <!-- Info Section -->
+  <div class="card bg-light">
+    <div class="card-body">
+      <h6 class="card-title"><i class="bi bi-info-circle"></i> Holiday Notifications</h6>
+      <p class="card-text mb-1">
+        <strong>Automatic Notifications:</strong> Slack notifications are sent automatically at <strong>11:00 PM IST</strong> daily for the next day's holidays.
+      </p>
+      <p class="card-text mb-0">
+        <strong>Test Notification:</strong> Use the "Test Notification" button to manually trigger notifications for tomorrow's holidays.
+      </p>
+    </div>
+  </div>
+</div>
+` }) %>

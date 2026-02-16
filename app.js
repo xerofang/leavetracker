@@ -4,6 +4,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
 const { sequelize } = require('./models');
+const holidayScheduler = require('./scheduler/holidayScheduler');
 
 const app = express();
 
@@ -88,6 +89,9 @@ sequelize.sync({ alter: process.env.NODE_ENV === 'development' })
     console.log('Database connected and synced');
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on http://0.0.0.0:${PORT}`);
+
+      // Start holiday notification scheduler
+      holidayScheduler.startScheduler();
     });
   })
   .catch(err => {

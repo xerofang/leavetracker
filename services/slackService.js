@@ -451,6 +451,102 @@ async function notifyLeaveCancelled(request, employee, leaveType) {
 }
 
 /**
+ * Notify about upcoming public holiday
+ */
+async function notifyHolidayAnnouncement(holiday) {
+  const webhookUrl = process.env.SLACK_HR_WEBHOOK_URL;
+  const companyName = process.env.COMPANY_NAME || 'Leave Tracker';
+
+  // Country display names and emojis
+  const countryInfo = {
+    'IN': { name: 'India', flag: '🇮🇳', emoji: '🪔' },
+    'US': { name: 'United States', flag: '🇺🇸', emoji: '🗽' }
+  };
+
+  const info = countryInfo[holiday.country] || { name: holiday.country, flag: '🌍', emoji: '🎊' };
+
+  // Format the holiday date nicely
+  const holidayDate = new Date(holiday.date);
+  const formattedDate = holidayDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Simple text fallback
+  const textFallback = `🎉 Holiday Reminder: Tomorrow is ${holiday.name}!\n` +
+    `📅 Date: ${formattedDate}\n` +
+    `🌍 Region: ${info.name}\n` +
+    `${holiday.description ? `ℹ️ ${holiday.description}` : ''}\n` +
+    `Enjoy your day off!`;
+
+  const blocks = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: '🎉 Holiday Reminder',
+        emoji: true
+      }
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `Tomorrow is *${holiday.name}*! ${info.emoji}`
+      }
+    },
+    {
+      type: 'section',
+      fields: [
+        {
+          type: 'mrkdwn',
+          text: `*📅 Date:*\n${formattedDate}`
+        },
+        {
+          type: 'mrkdwn',
+          text: `*${info.flag} Region:*\n${info.name}`
+        }
+      ]
+    }
+  ];
+
+  // Add description if provided
+  if (holiday.description) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `_${holiday.description}_`
+      }
+    });
+  }
+
+  // Add footer
+  blocks.push({
+    type: 'divider'
+  });
+
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `Enjoy your day off! 🎊 | ${companyName}`
+      }
+    ]
+  });
+
+  const payload = {
+    text: textFallback,
+    blocks: blocks
+  };
+
+  return sendToSlack(webhookUrl, payload);
+}
+
+/**
  * Send a custom message to Slack
  */
 async function sendCustomMessage(message, channel = 'hr') {
@@ -480,5 +576,6 @@ module.exports = {
   notifyLeaveApproved,
   notifyLeaveRejected,
   notifyLeaveCancelled,
+  notifyHolidayAnnouncement,
   sendCustomMessage
 };

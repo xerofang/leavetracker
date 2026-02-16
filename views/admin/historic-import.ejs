@@ -15,7 +15,7 @@
                 <label for="employee_id" class="form-label">Select Employee <span class="text-danger">*</span></label>
                 <select class="form-select" id="employee_id" name="employee_id" required>
                   <option value="">Choose employee...</option>
-                  ${employees.map(e => \`<option value="\${e.id}">\${e.first_name} \${e.last_name} (\${e.email})</option>\`).join('')}
+                  ${employees.map(e => `<option value="${e.id}">${e.first_name} ${e.last_name} (${e.email})</option>`).join('')}
                 </select>
               </div>
 
@@ -23,7 +23,7 @@
                 <label for="leave_type_id" class="form-label">Primary Leave Type <span class="text-danger">*</span></label>
                 <select class="form-select" id="leave_type_id" name="leave_type_id" required>
                   <option value="">Select leave type</option>
-                  ${leaveTypes.map(lt => \`<option value="\${lt.id}">\${lt.name}</option>\`).join('')}
+                  ${leaveTypes.map(lt => `<option value="${lt.id}">${lt.name}</option>`).join('')}
                 </select>
                 <small class="text-muted">System will auto-consume from other types if this balance is insufficient</small>
               </div>
@@ -122,10 +122,10 @@
 
 <script>
 // Set max date to yesterday for historic imports
-const today = new Date();
-const yesterday = new Date(today);
+var today = new Date();
+var yesterday = new Date(today);
 yesterday.setDate(yesterday.getDate() - 1);
-const maxDate = yesterday.toISOString().split('T')[0];
+var maxDate = yesterday.toISOString().split('T')[0];
 document.getElementById('start_date').setAttribute('max', maxDate);
 document.getElementById('end_date').setAttribute('max', maxDate);
 
@@ -137,10 +137,10 @@ document.getElementById('end_date').addEventListener('change', previewConsumptio
 document.getElementById('confirmCheckbox').addEventListener('change', updateSubmitButton);
 
 async function previewConsumption() {
-  const employeeId = document.getElementById('employee_id').value;
-  const leaveTypeId = document.getElementById('leave_type_id').value;
-  const startDate = document.getElementById('start_date').value;
-  const endDate = document.getElementById('end_date').value;
+  var employeeId = document.getElementById('employee_id').value;
+  var leaveTypeId = document.getElementById('leave_type_id').value;
+  var startDate = document.getElementById('start_date').value;
+  var endDate = document.getElementById('end_date').value;
 
   // Reset state
   document.getElementById('submitBtn').disabled = true;
@@ -167,8 +167,8 @@ async function previewConsumption() {
   document.getElementById('previewContent').classList.add('d-none');
 
   try {
-    const response = await fetch(\`/admin/api/preview-balance-consumption?employee_id=\${employeeId}&leave_type_id=\${leaveTypeId}&start_date=\${startDate}&end_date=\${endDate}\`);
-    const data = await response.json();
+    var response = await fetch('/admin/api/preview-balance-consumption?employee_id=' + employeeId + '&leave_type_id=' + leaveTypeId + '&start_date=' + startDate + '&end_date=' + endDate);
+    var data = await response.json();
 
     document.getElementById('previewLoading').classList.add('d-none');
 
@@ -189,16 +189,14 @@ async function previewConsumption() {
     document.getElementById('totalDaysDisplay').textContent = data.totalDays + ' day' + (data.totalDays !== 1 ? 's' : '');
 
     // Build breakdown table
-    const tableBody = document.getElementById('breakdownTable');
+    var tableBody = document.getElementById('breakdownTable');
     tableBody.innerHTML = '';
-    data.breakdown.forEach(item => {
-      const row = document.createElement('tr');
+    data.breakdown.forEach(function(item) {
+      var row = document.createElement('tr');
       row.className = item.isUnpaid ? 'table-danger' : '';
-      row.innerHTML = \`
-        <td>\${item.leaveTypeName}\${item.isUnpaid ? ' <span class="badge bg-danger">Unpaid</span>' : ''}</td>
-        <td class="text-center">\${item.isUnpaid ? '-' : item.available.toFixed(1)}</td>
-        <td class="text-center"><strong>\${item.days}</strong></td>
-      \`;
+      row.innerHTML = '<td>' + item.leaveTypeName + (item.isUnpaid ? ' <span class="badge bg-danger">Unpaid</span>' : '') + '</td>' +
+        '<td class="text-center">' + (item.isUnpaid ? '-' : item.available.toFixed(1)) + '</td>' +
+        '<td class="text-center"><strong>' + item.days + '</strong></td>';
       tableBody.appendChild(row);
     });
 
@@ -228,14 +226,14 @@ async function previewConsumption() {
 }
 
 function updateSubmitButton() {
-  const isConfirmed = document.getElementById('confirmCheckbox').checked;
-  const hasBreakdown = document.getElementById('confirmed_breakdown').value !== '[]';
+  var isConfirmed = document.getElementById('confirmCheckbox').checked;
+  var hasBreakdown = document.getElementById('confirmed_breakdown').value !== '[]';
   document.getElementById('submitBtn').disabled = !(isConfirmed && hasBreakdown);
 }
 
 // Form validation
 document.getElementById('historicForm').addEventListener('submit', function(e) {
-  const breakdown = document.getElementById('confirmed_breakdown').value;
+  var breakdown = document.getElementById('confirmed_breakdown').value;
   if (breakdown === '[]') {
     e.preventDefault();
     alert('Please select valid dates and wait for the balance preview to load.');
@@ -248,4 +246,4 @@ document.getElementById('historicForm').addEventListener('submit', function(e) {
   }
 });
 </script>
-\` }) %>
+` }) %>

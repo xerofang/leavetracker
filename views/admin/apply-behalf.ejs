@@ -15,7 +15,7 @@
                 <label for="employee_id" class="form-label">Select Employee <span class="text-danger">*</span></label>
                 <select class="form-select" id="employee_id" name="employee_id" required>
                   <option value="">Choose employee...</option>
-                  ${employees.map(e => \`<option value="\${e.id}">\${e.first_name} \${e.last_name} (\${e.email})</option>\`).join('')}
+                  ${employees.map(e => `<option value="${e.id}">${e.first_name} ${e.last_name} (${e.email})</option>`).join('')}
                 </select>
               </div>
 
@@ -23,7 +23,7 @@
                 <label for="leave_type_id" class="form-label">Leave Type <span class="text-danger">*</span></label>
                 <select class="form-select" id="leave_type_id" name="leave_type_id" required>
                   <option value="">Select leave type</option>
-                  ${leaveTypes.map(lt => \`<option value="\${lt.id}">\${lt.name}</option>\`).join('')}
+                  ${leaveTypes.map(lt => `<option value="${lt.id}">${lt.name}</option>`).join('')}
                 </select>
               </div>
 
@@ -165,7 +165,7 @@ async function previewConsumption() {
   document.getElementById('smartConsumption').classList.add('d-none');
 
   try {
-    const response = await fetch(\`/admin/api/preview-balance-consumption?employee_id=\${employeeId}&leave_type_id=\${leaveTypeId}&start_date=\${startDate}&end_date=\${endDate}\`);
+    const response = await fetch('/admin/api/preview-balance-consumption?employee_id=' + employeeId + '&leave_type_id=' + leaveTypeId + '&start_date=' + startDate + '&end_date=' + endDate);
     const data = await response.json();
 
     document.getElementById('previewLoading').classList.add('d-none');
@@ -205,14 +205,12 @@ async function previewConsumption() {
       // Build breakdown table
       const tableBody = document.getElementById('breakdownTable');
       tableBody.innerHTML = '';
-      data.breakdown.forEach(item => {
+      data.breakdown.forEach(function(item) {
         const row = document.createElement('tr');
         row.className = item.isUnpaid ? 'table-danger' : '';
-        row.innerHTML = \`
-          <td>\${item.leaveTypeName}\${item.isUnpaid ? ' <span class="badge bg-danger">Unpaid</span>' : ''}</td>
-          <td class="text-center">\${item.isUnpaid ? '-' : item.available.toFixed(1)}</td>
-          <td class="text-center"><strong>\${item.days}</strong></td>
-        \`;
+        row.innerHTML = '<td>' + item.leaveTypeName + (item.isUnpaid ? ' <span class="badge bg-danger">Unpaid</span>' : '') + '</td>' +
+          '<td class="text-center">' + (item.isUnpaid ? '-' : item.available.toFixed(1)) + '</td>' +
+          '<td class="text-center"><strong>' + item.days + '</strong></td>';
         tableBody.appendChild(row);
       });
 
@@ -264,4 +262,4 @@ document.getElementById('leaveForm').addEventListener('submit', function(e) {
   }
 });
 </script>
-\` }) %>
+` }) %>

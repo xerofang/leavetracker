@@ -585,4 +585,155 @@ router.get('/api/employee-balance/:id', async (req, res) => {
   }
 });
 
+// API: Preview balance consumption (Smart Consumption)
+router.get('/api/preview-balance-consumption', async (req, res) => {
+  try {
+    const { employee_id, leave_type_id, start_date, end_date } = req.query;
+
+    if (!employee_id || !leave_type_id || !start_date || !end_date) {
+      return res.status(400).json({ success: false, error: 'Missing required parameters' });
+    }
+
+    const year = new Date(start_date).getFullYear();
+    const totalDays = calculateWorkingDays(start_date, end_date);
+
+    if (totalDays <= 0) {
+      return res.json({
+        success: true,
+        breakdown: [],
+        hasOverflow: false,
+        unpaidDays: 0,
+        totalDays: 0,
+        message: 'No working days in selected range'
+      });
+    }
+
+    const consumption = await leaveService.calculateSmartBalanceConsumption(
+      parseInt(employee_id),
+      parseInt(leave_type_id),
+      totalDays,
+      year
+    );
+
+    res.json({
+      success: true,
+      ...consumption,
+      totalDays
+    });
+  } catch (error) {
+    console.error('Preview balance consumption error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /admin/historic-import - Show historic leave import form
+router.get('/historic-import', async (req, res) => {
+  try {
+    const employees = await Employee.findAll({ where: { is_active: true }, order: [['first_name', 'ASC']] });
+    const leaveTypes = await LeaveType.findAll({
+      where: {
+        is_active: true,
+        name: { [Op.ne]: 'Unpaid Leave' } // Don't show Unpaid Leave as primary selection
+      }
+    });
+
+    res.render('admin/historic-import', {
+      title: 'Import Historic Leave',
+      employees,
+      leaveTypes
+    });
+  } catch (error) {
+    console.error('Historic import page error:', error);
+    req.flash('error', 'Error loading page');
+    res.redirect('/admin/dashboard');
+  }
+});
+
+// POST /admin/historic-import - Create historic leave request
+router.post('/historic-import', async (req, res) => {
+  try {
+    const { employee_id, leave_type_id, start_date, end_date, reason, confirmed_breakdown } = req.body;
+
+    // Validate dates are in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDateObj = new Date(end_date);
+    endDateObj.setHours(0, 0, 0, 0);
+
+    if (endDateObj >= today) {
+      req.flash('error', 'Historic leave must have end date in the past. For future leaves, use "Apply on Behalf".');
+      return res.redirect('/admin/historic-import');
+    }
+
+    const totalDays = calculateWorkingDays(start_date, end_date);
+    if (totalDays <= 0) {
+      req.flash('error', 'No working days in the selected date range');
+      return res.redirect('/admin/historic-import');
+    }
+
+    const breakdown = JSON.parse(confirmed_breakdown);
+
+    const request = await leaveService.createHistoricLeaveRequest({
+      employeeId: parseInt(employee_id),
+      leaveTypeId: parseInt(leave_type_id),
+      startDate: start_date,
+      endDate: end_date,
+      totalDays,
+      reason
+    }, breakdown, req.session.user.id);
+
+    // Get employee name for message
+    const employee = await Employee.findByPk(employee_id);
+    const employeeName = employee ? `${employee.first_name} ${employee.last_name}` : 'Employee';
+
+    // Build breakdown summary
+    const breakdownSummary = breakdown.map(b => `${b.days} ${b.leaveTypeName}`).join(', ');
+
+    req.flash('success', `Historic leave imported for ${employeeName}: ${breakdownSummary}`);
+    res.redirect('/admin/requests');
+
+  } catch (error) {
+    console.error('Historic import error:', error);
+    req.flash('error', error.message || 'Error importing historic leave');
+    res.redirect('/admin/historic-import');
+  }
+});
+
+// POST /admin/apply-behalf-smart - Apply leave with smart consumption
+router.post('/apply-behalf-smart', async (req, res) => {
+  try {
+    const { employee_id, leave_type_id, start_date, end_date, reason, confirmed_breakdown } = req.body;
+
+    const totalDays = calculateWorkingDays(start_date, end_date);
+    if (totalDays <= 0) {
+      req.flash('error', 'No working days in the selected date range');
+      return res.redirect('/admin/apply-behalf');
+    }
+
+    const breakdown = JSON.parse(confirmed_breakdown);
+
+    const request = await leaveService.createLeaveRequestWithSmartConsumption({
+      employeeId: parseInt(employee_id),
+      leaveTypeId: parseInt(leave_type_id),
+      startDate: start_date,
+      endDate: end_date,
+      totalDays,
+      reason,
+      requestedBy: req.session.user.id
+    }, breakdown);
+
+    // Get employee name for message
+    const employee = await Employee.findByPk(employee_id);
+    const employeeName = employee ? `${employee.first_name} ${employee.last_name}` : 'Employee';
+
+    req.flash('success', `Leave request created for ${employeeName} (pending approval)`);
+    res.redirect('/admin/requests');
+
+  } catch (error) {
+    console.error('Apply behalf smart error:', error);
+    req.flash('error', error.message || 'Error creating leave request');
+    res.redirect('/admin/apply-behalf');
+  }
+});
+
 module.exports = router;

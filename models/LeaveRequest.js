@@ -62,6 +62,26 @@ module.exports = (sequelize) => {
         model: 'employees',
         key: 'id'
       }
+    },
+    is_historic: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: 'True if this is a backdated/historic leave import'
+    },
+    is_multi_type: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: 'True if leave consumes from multiple leave types'
+    },
+    balance_breakdown: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'JSON array of {leaveTypeId, leaveTypeName, days, isUnpaid} for multi-type consumption'
+    },
+    unpaid_days: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0,
+      comment: 'Number of days that are unpaid (when all entitlements exhausted)'
     }
   }, {
     tableName: 'leave_requests',

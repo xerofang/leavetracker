@@ -1,6 +1,9 @@
-const { LeaveBalance, LeaveRequest, LeaveType, LeaveEntitlementLog, Employee } = require('../models');
+const { LeaveBalance, LeaveRequest, LeaveType, LeaveEntitlementLog, Employee, sequelize } = require('../models');
 const { calculateWorkingDays, getCurrentYear } = require('../utils/dateUtils');
 const { Op } = require('sequelize');
+
+// Priority order for consuming leave types (after primary type)
+const LEAVE_TYPE_PRIORITY = ['Casual', 'Sick', 'Flex', 'Unpaid Leave'];
 
 /**
  * Get or create leave balance for an employee
@@ -95,6 +98,7 @@ async function createLeaveRequest(data) {
 
 /**
  * Approve a leave request
+ * Handles both single-type and multi-type consumption
  */
 async function approveLeaveRequest(requestId, adminId, remarks = '') {
   const request = await LeaveRequest.findByPk(requestId);
@@ -102,26 +106,52 @@ async function approveLeaveRequest(requestId, adminId, remarks = '') {
   if (request.status !== 'pending') throw new Error('Only pending requests can be approved');
 
   const year = new Date(request.start_date).getFullYear();
-  const balance = await getOrCreateBalance(request.employee_id, request.leave_type_id, year);
+  const transaction = await sequelize.transaction();
 
-  // Move days from pending to used
-  await balance.update({
-    pending_days: Math.max(0, parseFloat(balance.pending_days) - parseFloat(request.total_days)),
-    used_days: parseFloat(balance.used_days) + parseFloat(request.total_days)
-  });
+  try {
+    // Check if this is a multi-type request
+    if (request.is_multi_type && request.balance_breakdown) {
+      const breakdown = typeof request.balance_breakdown === 'string'
+        ? JSON.parse(request.balance_breakdown)
+        : request.balance_breakdown;
 
-  // Update request status
-  await request.update({
-    status: 'approved',
-    approved_by: adminId,
-    admin_remarks: remarks
-  });
+      for (const item of breakdown) {
+        if (!item.isUnpaid && item.leaveTypeId) {
+          const balance = await getOrCreateBalance(request.employee_id, item.leaveTypeId, year);
+          await balance.update({
+            pending_days: Math.max(0, parseFloat(balance.pending_days) - item.days),
+            used_days: parseFloat(balance.used_days) + item.days
+          }, { transaction });
+        }
+      }
+    } else {
+      // Original single-type logic
+      const balance = await getOrCreateBalance(request.employee_id, request.leave_type_id, year);
+      await balance.update({
+        pending_days: Math.max(0, parseFloat(balance.pending_days) - parseFloat(request.total_days)),
+        used_days: parseFloat(balance.used_days) + parseFloat(request.total_days)
+      }, { transaction });
+    }
 
-  return request;
+    // Update request status
+    await request.update({
+      status: 'approved',
+      approved_by: adminId,
+      admin_remarks: remarks
+    }, { transaction });
+
+    await transaction.commit();
+    return request;
+
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 /**
  * Reject a leave request
+ * Handles both single-type and multi-type consumption
  */
 async function rejectLeaveRequest(requestId, adminId, remarks = '') {
   const request = await LeaveRequest.findByPk(requestId);
@@ -129,25 +159,50 @@ async function rejectLeaveRequest(requestId, adminId, remarks = '') {
   if (request.status !== 'pending') throw new Error('Only pending requests can be rejected');
 
   const year = new Date(request.start_date).getFullYear();
-  const balance = await getOrCreateBalance(request.employee_id, request.leave_type_id, year);
+  const transaction = await sequelize.transaction();
 
-  // Return pending days
-  await balance.update({
-    pending_days: Math.max(0, parseFloat(balance.pending_days) - parseFloat(request.total_days))
-  });
+  try {
+    // Check if this is a multi-type request
+    if (request.is_multi_type && request.balance_breakdown) {
+      const breakdown = typeof request.balance_breakdown === 'string'
+        ? JSON.parse(request.balance_breakdown)
+        : request.balance_breakdown;
 
-  // Update request status
-  await request.update({
-    status: 'rejected',
-    approved_by: adminId,
-    admin_remarks: remarks
-  });
+      for (const item of breakdown) {
+        if (!item.isUnpaid && item.leaveTypeId) {
+          const balance = await getOrCreateBalance(request.employee_id, item.leaveTypeId, year);
+          await balance.update({
+            pending_days: Math.max(0, parseFloat(balance.pending_days) - item.days)
+          }, { transaction });
+        }
+      }
+    } else {
+      // Original single-type logic
+      const balance = await getOrCreateBalance(request.employee_id, request.leave_type_id, year);
+      await balance.update({
+        pending_days: Math.max(0, parseFloat(balance.pending_days) - parseFloat(request.total_days))
+      }, { transaction });
+    }
 
-  return request;
+    // Update request status
+    await request.update({
+      status: 'rejected',
+      approved_by: adminId,
+      admin_remarks: remarks
+    }, { transaction });
+
+    await transaction.commit();
+    return request;
+
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 /**
  * Cancel a leave request
+ * Handles both single-type and multi-type consumption
  */
 async function cancelLeaveRequest(requestId, employeeId) {
   const request = await LeaveRequest.findByPk(requestId);
@@ -156,16 +211,40 @@ async function cancelLeaveRequest(requestId, employeeId) {
   if (request.status !== 'pending') throw new Error('Only pending requests can be cancelled');
 
   const year = new Date(request.start_date).getFullYear();
-  const balance = await getOrCreateBalance(request.employee_id, request.leave_type_id, year);
+  const transaction = await sequelize.transaction();
 
-  // Return pending days
-  await balance.update({
-    pending_days: Math.max(0, parseFloat(balance.pending_days) - parseFloat(request.total_days))
-  });
+  try {
+    // Check if this is a multi-type request
+    if (request.is_multi_type && request.balance_breakdown) {
+      const breakdown = typeof request.balance_breakdown === 'string'
+        ? JSON.parse(request.balance_breakdown)
+        : request.balance_breakdown;
 
-  await request.update({ status: 'cancelled' });
+      for (const item of breakdown) {
+        if (!item.isUnpaid && item.leaveTypeId) {
+          const balance = await getOrCreateBalance(request.employee_id, item.leaveTypeId, year);
+          await balance.update({
+            pending_days: Math.max(0, parseFloat(balance.pending_days) - item.days)
+          }, { transaction });
+        }
+      }
+    } else {
+      // Original single-type logic
+      const balance = await getOrCreateBalance(request.employee_id, request.leave_type_id, year);
+      await balance.update({
+        pending_days: Math.max(0, parseFloat(balance.pending_days) - parseFloat(request.total_days))
+      }, { transaction });
+    }
 
-  return request;
+    await request.update({ status: 'cancelled' }, { transaction });
+
+    await transaction.commit();
+    return request;
+
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 /**
@@ -585,6 +664,189 @@ async function getLeavesForCalendar(startDate, endDate, employeeId = null) {
 }
 
 /**
+ * Calculate smart balance consumption across multiple leave types
+ * Priority: Primary type -> Casual -> Sick -> Flex -> Unpaid Leave
+ * @param {number} employeeId
+ * @param {number} primaryLeaveTypeId - The leave type user selected
+ * @param {number} totalDays - Total working days requested
+ * @param {number} year
+ * @returns {Object} { breakdown, hasOverflow, unpaidDays, totalEntitled, totalRequested }
+ */
+async function calculateSmartBalanceConsumption(employeeId, primaryLeaveTypeId, totalDays, year = getCurrentYear()) {
+  const leaveTypes = await LeaveType.findAll({ where: { is_active: true } });
+  const balances = await getEmployeeBalances(employeeId, year);
+
+  // Find primary type
+  const primaryType = leaveTypes.find(lt => lt.id === primaryLeaveTypeId);
+  if (!primaryType) {
+    throw new Error('Invalid leave type selected');
+  }
+
+  // Sort types: primary first, then by priority order (excluding Unpaid Leave initially)
+  const sortedTypes = [primaryType];
+  for (const priorityName of LEAVE_TYPE_PRIORITY) {
+    if (priorityName === 'Unpaid Leave') continue; // Handle unpaid separately
+    const type = leaveTypes.find(lt =>
+      lt.name.toLowerCase() === priorityName.toLowerCase() && lt.id !== primaryLeaveTypeId
+    );
+    if (type) sortedTypes.push(type);
+  }
+
+  const breakdown = [];
+  let remainingDays = totalDays;
+  let totalEntitled = 0;
+
+  // Consume from each type in order
+  for (const leaveType of sortedTypes) {
+    if (remainingDays <= 0) break;
+
+    const balanceInfo = balances.find(b => b.leaveType.id === leaveType.id);
+    const available = balanceInfo ? parseFloat(balanceInfo.available) : 0;
+    totalEntitled += available;
+
+    if (available > 0) {
+      const daysToConsume = Math.min(remainingDays, available);
+      breakdown.push({
+        leaveTypeId: leaveType.id,
+        leaveTypeName: leaveType.name,
+        days: daysToConsume,
+        isUnpaid: false,
+        available: available
+      });
+      remainingDays -= daysToConsume;
+    }
+  }
+
+  // Any remaining days are unpaid
+  const unpaidDays = remainingDays;
+  if (unpaidDays > 0) {
+    // Find or note the Unpaid Leave type
+    const unpaidType = leaveTypes.find(lt => lt.name === 'Unpaid Leave');
+    breakdown.push({
+      leaveTypeId: unpaidType ? unpaidType.id : null,
+      leaveTypeName: 'Unpaid Leave',
+      days: unpaidDays,
+      isUnpaid: true,
+      available: 0
+    });
+  }
+
+  return {
+    breakdown,
+    hasOverflow: unpaidDays > 0 || breakdown.length > 1,
+    unpaidDays,
+    totalEntitled,
+    totalRequested: totalDays,
+    primaryLeaveType: primaryType.name
+  };
+}
+
+/**
+ * Create a historic (backdated) leave request
+ * Goes directly to 'approved' status and updates used_days
+ * @param {Object} data - Request data
+ * @param {Array} confirmedBreakdown - Confirmed balance breakdown
+ * @param {number} adminId - Admin creating the record
+ */
+async function createHistoricLeaveRequest(data, confirmedBreakdown, adminId) {
+  const { employeeId, leaveTypeId, startDate, endDate, totalDays, reason } = data;
+  const year = new Date(startDate).getFullYear();
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    // Calculate unpaid days from breakdown
+    const unpaidItem = confirmedBreakdown.find(b => b.isUnpaid);
+    const unpaidDays = unpaidItem ? unpaidItem.days : 0;
+
+    // Create request with status = 'approved' directly
+    const request = await LeaveRequest.create({
+      employee_id: employeeId,
+      leave_type_id: leaveTypeId,
+      start_date: startDate,
+      end_date: endDate,
+      total_days: totalDays,
+      reason,
+      status: 'approved',
+      requested_by: adminId,
+      approved_by: adminId,
+      is_historic: true,
+      is_multi_type: confirmedBreakdown.length > 1,
+      balance_breakdown: confirmedBreakdown,
+      unpaid_days: unpaidDays,
+      admin_remarks: 'Historic leave import'
+    }, { transaction });
+
+    // Directly update used_days (skip pending) for each type in breakdown
+    for (const item of confirmedBreakdown) {
+      if (!item.isUnpaid && item.leaveTypeId) {
+        const balance = await getOrCreateBalance(employeeId, item.leaveTypeId, year);
+        await balance.update({
+          used_days: parseFloat(balance.used_days) + item.days
+        }, { transaction });
+      }
+    }
+
+    await transaction.commit();
+    return request;
+
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+/**
+ * Create leave request with smart balance consumption (for admin apply-on-behalf)
+ * @param {Object} data - Request data
+ * @param {Array} confirmedBreakdown - User-confirmed breakdown
+ */
+async function createLeaveRequestWithSmartConsumption(data, confirmedBreakdown) {
+  const { employeeId, leaveTypeId, startDate, endDate, totalDays, reason, requestedBy } = data;
+  const year = new Date(startDate).getFullYear();
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    // Calculate unpaid days from breakdown
+    const unpaidItem = confirmedBreakdown.find(b => b.isUnpaid);
+    const unpaidDays = unpaidItem ? unpaidItem.days : 0;
+
+    // Create main leave request (status: pending)
+    const request = await LeaveRequest.create({
+      employee_id: employeeId,
+      leave_type_id: leaveTypeId,
+      start_date: startDate,
+      end_date: endDate,
+      total_days: totalDays,
+      reason,
+      status: 'pending',
+      requested_by: requestedBy,
+      is_multi_type: confirmedBreakdown.length > 1,
+      balance_breakdown: confirmedBreakdown,
+      unpaid_days: unpaidDays
+    }, { transaction });
+
+    // Update pending_days for ALL involved leave types
+    for (const item of confirmedBreakdown) {
+      if (!item.isUnpaid && item.leaveTypeId) {
+        const balance = await getOrCreateBalance(employeeId, item.leaveTypeId, year);
+        await balance.update({
+          pending_days: parseFloat(balance.pending_days) + item.days
+        }, { transaction });
+      }
+    }
+
+    await transaction.commit();
+    return request;
+
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+/**
  * Reset balances for new year
  */
 async function resetYearlyBalances(newYear) {
@@ -624,5 +886,9 @@ module.exports = {
   getAllRequests,
   getEmployeeRequests,
   getLeavesForCalendar,
-  resetYearlyBalances
+  resetYearlyBalances,
+  // Smart consumption functions
+  calculateSmartBalanceConsumption,
+  createHistoricLeaveRequest,
+  createLeaveRequestWithSmartConsumption
 };

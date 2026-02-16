@@ -1,0 +1,251 @@
+<%- include('../layouts/main', { body: `
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="card shadow">
+      <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Import Historic Leave</h5>
+        <small>Import previously approved leave records (dates must be in the past)</small>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="/admin/historic-import" id="historicForm">
+          <div class="row">
+            <!-- Left Column - Form Fields -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="employee_id" class="form-label">Select Employee <span class="text-danger">*</span></label>
+                <select class="form-select" id="employee_id" name="employee_id" required>
+                  <option value="">Choose employee...</option>
+                  ${employees.map(e => \`<option value="\${e.id}">\${e.first_name} \${e.last_name} (\${e.email})</option>\`).join('')}
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="leave_type_id" class="form-label">Primary Leave Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="leave_type_id" name="leave_type_id" required>
+                  <option value="">Select leave type</option>
+                  ${leaveTypes.map(lt => \`<option value="\${lt.id}">\${lt.name}</option>\`).join('')}
+                </select>
+                <small class="text-muted">System will auto-consume from other types if this balance is insufficient</small>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control" id="end_date" name="end_date" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="reason" class="form-label">Reason/Notes</label>
+                <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Enter reason for leave (optional)"></textarea>
+              </div>
+            </div>
+
+            <!-- Right Column - Balance Preview -->
+            <div class="col-md-6">
+              <div class="card bg-light">
+                <div class="card-header">
+                  <strong><i class="bi bi-calculator"></i> Balance Consumption Preview</strong>
+                </div>
+                <div class="card-body">
+                  <div id="previewLoading" class="text-center text-muted d-none">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                    Calculating...
+                  </div>
+
+                  <div id="previewPlaceholder" class="text-muted">
+                    <i class="bi bi-info-circle"></i> Select employee, leave type, and dates to see balance breakdown
+                  </div>
+
+                  <div id="previewContent" class="d-none">
+                    <div class="mb-3">
+                      <strong>Working Days:</strong> <span id="totalDaysDisplay" class="badge bg-primary">0</span>
+                    </div>
+
+                    <table class="table table-sm table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Leave Type</th>
+                          <th class="text-center">Available</th>
+                          <th class="text-center">To Consume</th>
+                        </tr>
+                      </thead>
+                      <tbody id="breakdownTable">
+                      </tbody>
+                    </table>
+
+                    <!-- Overflow Warning -->
+                    <div id="overflowWarning" class="alert alert-warning d-none">
+                      <i class="bi bi-exclamation-triangle"></i>
+                      <strong>Multiple Leave Types:</strong> This leave will consume from multiple leave type balances.
+                    </div>
+
+                    <!-- Unpaid Warning -->
+                    <div id="unpaidWarning" class="alert alert-danger d-none">
+                      <i class="bi bi-exclamation-circle"></i>
+                      <strong>Unpaid Leave:</strong> <span id="unpaidDaysDisplay">0</span> days will be marked as unpaid leave.
+                    </div>
+
+                    <!-- Confirmation -->
+                    <div class="form-check mt-3" id="confirmSection">
+                      <input class="form-check-input" type="checkbox" id="confirmCheckbox" required>
+                      <label class="form-check-label" for="confirmCheckbox">
+                        I confirm this historic leave import and the balance breakdown above
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden field for breakdown -->
+          <input type="hidden" id="confirmed_breakdown" name="confirmed_breakdown" value="[]">
+
+          <hr class="my-4">
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="/admin/requests" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-secondary" id="submitBtn" disabled>
+              <i class="bi bi-clock-history"></i> Import Historic Leave
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Set max date to yesterday for historic imports
+const today = new Date();
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+const maxDate = yesterday.toISOString().split('T')[0];
+document.getElementById('start_date').setAttribute('max', maxDate);
+document.getElementById('end_date').setAttribute('max', maxDate);
+
+// Event listeners
+document.getElementById('employee_id').addEventListener('change', previewConsumption);
+document.getElementById('leave_type_id').addEventListener('change', previewConsumption);
+document.getElementById('start_date').addEventListener('change', previewConsumption);
+document.getElementById('end_date').addEventListener('change', previewConsumption);
+document.getElementById('confirmCheckbox').addEventListener('change', updateSubmitButton);
+
+async function previewConsumption() {
+  const employeeId = document.getElementById('employee_id').value;
+  const leaveTypeId = document.getElementById('leave_type_id').value;
+  const startDate = document.getElementById('start_date').value;
+  const endDate = document.getElementById('end_date').value;
+
+  // Reset state
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('confirmCheckbox').checked = false;
+
+  if (!employeeId || !leaveTypeId || !startDate || !endDate) {
+    document.getElementById('previewPlaceholder').classList.remove('d-none');
+    document.getElementById('previewContent').classList.add('d-none');
+    document.getElementById('previewLoading').classList.add('d-none');
+    return;
+  }
+
+  // Validate end date is after start date
+  if (new Date(endDate) < new Date(startDate)) {
+    document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> End date must be after start date</span>';
+    document.getElementById('previewPlaceholder').classList.remove('d-none');
+    document.getElementById('previewContent').classList.add('d-none');
+    return;
+  }
+
+  // Show loading
+  document.getElementById('previewPlaceholder').classList.add('d-none');
+  document.getElementById('previewLoading').classList.remove('d-none');
+  document.getElementById('previewContent').classList.add('d-none');
+
+  try {
+    const response = await fetch(\`/admin/api/preview-balance-consumption?employee_id=\${employeeId}&leave_type_id=\${leaveTypeId}&start_date=\${startDate}&end_date=\${endDate}\`);
+    const data = await response.json();
+
+    document.getElementById('previewLoading').classList.add('d-none');
+
+    if (!data.success) {
+      document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> ' + data.error + '</span>';
+      document.getElementById('previewPlaceholder').classList.remove('d-none');
+      return;
+    }
+
+    if (data.totalDays === 0) {
+      document.getElementById('previewPlaceholder').innerHTML = '<span class="text-warning"><i class="bi bi-info-circle"></i> No working days in selected date range</span>';
+      document.getElementById('previewPlaceholder').classList.remove('d-none');
+      return;
+    }
+
+    // Show content
+    document.getElementById('previewContent').classList.remove('d-none');
+    document.getElementById('totalDaysDisplay').textContent = data.totalDays + ' day' + (data.totalDays !== 1 ? 's' : '');
+
+    // Build breakdown table
+    const tableBody = document.getElementById('breakdownTable');
+    tableBody.innerHTML = '';
+    data.breakdown.forEach(item => {
+      const row = document.createElement('tr');
+      row.className = item.isUnpaid ? 'table-danger' : '';
+      row.innerHTML = \`
+        <td>\${item.leaveTypeName}\${item.isUnpaid ? ' <span class="badge bg-danger">Unpaid</span>' : ''}</td>
+        <td class="text-center">\${item.isUnpaid ? '-' : item.available.toFixed(1)}</td>
+        <td class="text-center"><strong>\${item.days}</strong></td>
+      \`;
+      tableBody.appendChild(row);
+    });
+
+    // Show/hide warnings
+    if (data.hasOverflow && data.unpaidDays === 0) {
+      document.getElementById('overflowWarning').classList.remove('d-none');
+    } else {
+      document.getElementById('overflowWarning').classList.add('d-none');
+    }
+
+    if (data.unpaidDays > 0) {
+      document.getElementById('unpaidWarning').classList.remove('d-none');
+      document.getElementById('unpaidDaysDisplay').textContent = data.unpaidDays;
+    } else {
+      document.getElementById('unpaidWarning').classList.add('d-none');
+    }
+
+    // Store breakdown for submission
+    document.getElementById('confirmed_breakdown').value = JSON.stringify(data.breakdown);
+
+  } catch (error) {
+    console.error('Preview error:', error);
+    document.getElementById('previewLoading').classList.add('d-none');
+    document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Error loading preview</span>';
+    document.getElementById('previewPlaceholder').classList.remove('d-none');
+  }
+}
+
+function updateSubmitButton() {
+  const isConfirmed = document.getElementById('confirmCheckbox').checked;
+  const hasBreakdown = document.getElementById('confirmed_breakdown').value !== '[]';
+  document.getElementById('submitBtn').disabled = !(isConfirmed && hasBreakdown);
+}
+
+// Form validation
+document.getElementById('historicForm').addEventListener('submit', function(e) {
+  const breakdown = document.getElementById('confirmed_breakdown').value;
+  if (breakdown === '[]') {
+    e.preventDefault();
+    alert('Please select valid dates and wait for the balance preview to load.');
+    return false;
+  }
+  if (!document.getElementById('confirmCheckbox').checked) {
+    e.preventDefault();
+    alert('Please confirm the balance breakdown before importing.');
+    return false;
+  }
+});
+</script>
+\` }) %>

@@ -919,6 +919,73 @@ async function createLeaveRequestWithSmartConsumption(data, confirmedBreakdown) 
 }
 
 /**
+ * Grant reward/earned leaves to employees
+ * @param {Array} employeeIds - Array of employee IDs to grant leaves to
+ * @param {number} days - Number of days to grant
+ * @param {string} reason - Reason for granting
+ * @param {number} adminId - Admin granting the leaves
+ * @param {number} year - Year for the balance (default: current year)
+ * @returns {Object} Summary of grants
+ */
+async function grantRewardLeaves(employeeIds, days, reason, adminId, year = getCurrentYear()) {
+  const leaveTypes = await LeaveType.findAll({ where: { is_active: true } });
+
+  // Find Paid Leave type
+  const paidLeaveType = leaveTypes.find(lt => lt.name === 'Paid Leave');
+  if (!paidLeaveType) {
+    throw new Error('Paid Leave type not found. Please create a "Paid Leave" leave type first.');
+  }
+
+  const results = {
+    success: [],
+    errors: [],
+    totalGranted: 0
+  };
+
+  for (const employeeId of employeeIds) {
+    try {
+      const employee = await Employee.findByPk(employeeId);
+      if (!employee) {
+        results.errors.push({ employeeId, error: 'Employee not found' });
+        continue;
+      }
+
+      // Get or create balance for Paid Leave
+      const balance = await getOrCreateBalance(employeeId, paidLeaveType.id, year);
+      const previousDays = parseFloat(balance.entitled_days);
+      const newDays = previousDays + parseFloat(days);
+
+      // Update balance
+      await balance.update({ entitled_days: newDays });
+
+      // Log the entitlement change
+      await LeaveEntitlementLog.create({
+        employee_id: employeeId,
+        leave_type_id: paidLeaveType.id,
+        year,
+        days_added: parseFloat(days),
+        reason: reason || 'Reward/Earned Leave',
+        created_by: adminId
+      });
+
+      results.success.push({
+        employeeId,
+        employeeName: `${employee.first_name} ${employee.last_name}`,
+        previousDays,
+        newDays,
+        daysAdded: parseFloat(days)
+      });
+      results.totalGranted += parseFloat(days);
+
+    } catch (error) {
+      results.errors.push({ employeeId, error: error.message });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Reset balances for new year
  */
 async function resetYearlyBalances(newYear) {
@@ -962,5 +1029,7 @@ module.exports = {
   // Smart consumption functions
   calculateSmartBalanceConsumption,
   createHistoricLeaveRequest,
-  createLeaveRequestWithSmartConsumption
+  createLeaveRequestWithSmartConsumption,
+  // Reward leaves
+  grantRewardLeaves
 };

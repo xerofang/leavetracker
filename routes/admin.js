@@ -752,6 +752,120 @@ router.post('/apply-behalf-smart', async (req, res) => {
   }
 });
 
+// ==================== REWARD LEAVES MANAGEMENT ====================
+
+// GET /admin/reward-leaves - Show reward leaves form
+router.get('/reward-leaves', async (req, res) => {
+  try {
+    const employees = await Employee.findAll({
+      where: { is_active: true },
+      order: [['first_name', 'ASC'], ['last_name', 'ASC']]
+    });
+
+    // Get Paid Leave type to show current balances
+    const paidLeaveType = await LeaveType.findOne({ where: { name: 'Paid Leave' } });
+    const year = getCurrentYear();
+
+    // Get current Paid Leave balances for all employees
+    const balances = {};
+    if (paidLeaveType) {
+      for (const emp of employees) {
+        const balance = await leaveService.getOrCreateBalance(emp.id, paidLeaveType.id, year);
+        balances[emp.id] = {
+          entitled: parseFloat(balance.entitled_days),
+          used: parseFloat(balance.used_days),
+          available: balance.getAvailableDays()
+        };
+      }
+    }
+
+    res.render('admin/reward-leaves', {
+      title: 'Grant Reward Leaves',
+      employees,
+      balances,
+      year,
+      paidLeaveType
+    });
+  } catch (error) {
+    console.error('Reward leaves page error:', error);
+    req.flash('error', 'Error loading reward leaves page');
+    res.redirect('/admin/dashboard');
+  }
+});
+
+// POST /admin/reward-leaves - Grant reward leaves to employees
+router.post('/reward-leaves', async (req, res) => {
+  try {
+    const { employee_ids, days, reason, grant_all } = req.body;
+
+    if (!days || parseFloat(days) <= 0) {
+      req.flash('error', 'Please enter a valid number of days');
+      return res.redirect('/admin/reward-leaves');
+    }
+
+    let employeeIds = [];
+
+    if (grant_all === 'on') {
+      // Grant to all active employees
+      const allEmployees = await Employee.findAll({
+        where: { is_active: true },
+        attributes: ['id']
+      });
+      employeeIds = allEmployees.map(e => e.id);
+    } else {
+      // Grant to selected employees
+      if (!employee_ids || (Array.isArray(employee_ids) && employee_ids.length === 0)) {
+        req.flash('error', 'Please select at least one employee');
+        return res.redirect('/admin/reward-leaves');
+      }
+      employeeIds = Array.isArray(employee_ids) ? employee_ids.map(id => parseInt(id)) : [parseInt(employee_ids)];
+    }
+
+    const result = await leaveService.grantRewardLeaves(
+      employeeIds,
+      parseFloat(days),
+      reason,
+      req.session.user.id
+    );
+
+    if (result.success.length > 0) {
+      req.flash('success', `Successfully granted ${days} Paid Leave day(s) to ${result.success.length} employee(s). Total days granted: ${result.totalGranted}`);
+    }
+
+    if (result.errors.length > 0) {
+      req.flash('error', `Failed for ${result.errors.length} employee(s): ${result.errors.map(e => e.error).join(', ')}`);
+    }
+
+    res.redirect('/admin/reward-leaves');
+  } catch (error) {
+    console.error('Grant reward leaves error:', error);
+    req.flash('error', error.message || 'Error granting reward leaves');
+    res.redirect('/admin/reward-leaves');
+  }
+});
+
+// GET /admin/api/employee-paid-balance/:id - Get employee's Paid Leave balance
+router.get('/api/employee-paid-balance/:id', async (req, res) => {
+  try {
+    const paidLeaveType = await LeaveType.findOne({ where: { name: 'Paid Leave' } });
+    if (!paidLeaveType) {
+      return res.json({ success: false, error: 'Paid Leave type not found' });
+    }
+
+    const year = getCurrentYear();
+    const balance = await leaveService.getOrCreateBalance(req.params.id, paidLeaveType.id, year);
+
+    res.json({
+      success: true,
+      entitled: parseFloat(balance.entitled_days),
+      used: parseFloat(balance.used_days),
+      available: balance.getAvailableDays()
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== HOLIDAY MANAGEMENT ====================
 
 // GET /admin/holidays - List all holidays

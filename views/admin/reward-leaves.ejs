@@ -1,0 +1,287 @@
+<%- include('../layouts/main', { body: `
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-gift"></i> Grant Reward Leaves</h2>
+      <p class="text-muted mb-0">Award Paid Leave to employees as rewards or earned benefits</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Grant Form -->
+    <div class="col-lg-7">
+      <div class="card shadow">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="bi bi-star-fill"></i> Grant Paid Leave</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/admin/reward-leaves" id="rewardForm">
+            <!-- Days to Grant -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <label for="days" class="form-label">Days to Grant <span class="text-danger">*</span></label>
+                <input type="number" class="form-control form-control-lg" id="days" name="days"
+                  min="0.5" max="30" step="0.5" value="1" required>
+                <div class="form-text">Enter number of Paid Leave days to award</div>
+              </div>
+              <div class="col-md-6">
+                <label for="reason" class="form-label">Reason</label>
+                <input type="text" class="form-control form-control-lg" id="reason" name="reason"
+                  placeholder="e.g., Performance bonus, Work anniversary" maxlength="255">
+              </div>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="mb-4">
+              <label class="form-label">Quick Presets</label>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-warning btn-sm preset-btn" data-days="1" data-reason="Performance reward">
+                  <i class="bi bi-trophy"></i> Performance (1 day)
+                </button>
+                <button type="button" class="btn btn-outline-warning btn-sm preset-btn" data-days="2" data-reason="Work anniversary bonus">
+                  <i class="bi bi-calendar-heart"></i> Anniversary (2 days)
+                </button>
+                <button type="button" class="btn btn-outline-warning btn-sm preset-btn" data-days="0.5" data-reason="Spot recognition">
+                  <i class="bi bi-star"></i> Spot Award (0.5 day)
+                </button>
+                <button type="button" class="btn btn-outline-warning btn-sm preset-btn" data-days="3" data-reason="Project completion bonus">
+                  <i class="bi bi-check2-circle"></i> Project Bonus (3 days)
+                </button>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Employee Selection -->
+            <div class="mb-3">
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="grant_all" name="grant_all">
+                <label class="form-check-label" for="grant_all">
+                  <strong>Grant to ALL active employees</strong>
+                  <span class="text-muted">(${employees.length} employees)</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="employeeSelection">
+              <label class="form-label">Select Employees <span class="text-danger">*</span></label>
+
+              <!-- Search and Filter -->
+              <div class="input-group mb-2">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="employeeSearch" placeholder="Search employees...">
+                <button type="button" class="btn btn-outline-secondary" id="selectAll">Select All</button>
+                <button type="button" class="btn btn-outline-secondary" id="clearAll">Clear</button>
+              </div>
+
+              <!-- Employee List -->
+              <div class="employee-list border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+                ${employees.map(function(emp) {
+                  var bal = balances[emp.id] || { entitled: 0, used: 0, available: 0 };
+                  return '<div class="form-check employee-item" data-name="' + (emp.first_name + ' ' + emp.last_name).toLowerCase() + '">' +
+                    '<input class="form-check-input employee-checkbox" type="checkbox" name="employee_ids" value="' + emp.id + '" id="emp_' + emp.id + '">' +
+                    '<label class="form-check-label d-flex justify-content-between w-100" for="emp_' + emp.id + '">' +
+                      '<span>' + emp.first_name + ' ' + emp.last_name +
+                        (emp.department ? ' <small class="text-muted">(' + emp.department + ')</small>' : '') +
+                      '</span>' +
+                      '<span class="badge bg-warning text-dark">Current: ' + bal.available.toFixed(1) + ' days</span>' +
+                    '</label>' +
+                  '</div>';
+                }).join('')}
+              </div>
+
+              <div class="mt-2">
+                <small class="text-muted">Selected: <span id="selectedCount">0</span> employee(s)</small>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Preview -->
+            <div id="previewSection" class="alert alert-info d-none">
+              <h6><i class="bi bi-eye"></i> Preview</h6>
+              <p class="mb-0">
+                Will grant <strong><span id="previewDays">0</span> day(s)</strong> of Paid Leave to
+                <strong><span id="previewCount">0</span> employee(s)</strong>
+                <span id="previewReason"></span>
+              </p>
+            </div>
+
+            <!-- Submit -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <a href="/admin/dashboard" class="btn btn-outline-secondary">Cancel</a>
+              <button type="submit" class="btn btn-warning btn-lg" id="submitBtn" disabled>
+                <i class="bi bi-gift-fill"></i> Grant Reward Leave
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="col-lg-5">
+      <!-- Current Balances Summary -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Paid Leave Summary (${year})</h6>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-4">
+              <div class="h4 text-warning mb-0">${employees.length}</div>
+              <small class="text-muted">Employees</small>
+            </div>
+            <div class="col-4">
+              <div class="h4 text-success mb-0">${Object.values(balances).reduce((sum, b) => sum + b.entitled, 0).toFixed(1)}</div>
+              <small class="text-muted">Total Entitled</small>
+            </div>
+            <div class="col-4">
+              <div class="h4 text-primary mb-0">${Object.values(balances).reduce((sum, b) => sum + b.available, 0).toFixed(1)}</div>
+              <small class="text-muted">Total Available</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How it Works -->
+      <div class="card bg-light">
+        <div class="card-body">
+          <h6 class="card-title"><i class="bi bi-lightbulb"></i> How Reward Leaves Work</h6>
+          <ul class="mb-0 small">
+            <li class="mb-2">
+              <strong>Paid Leave</strong> is a special leave type that represents earned/reward days
+            </li>
+            <li class="mb-2">
+              Employees see Paid Leave with a <span class="badge bg-warning text-dark">golden highlight</span> on their dashboard
+            </li>
+            <li class="mb-2">
+              Paid Leave does <strong>not cascade</strong> to other leave types - it's standalone
+            </li>
+            <li class="mb-2">
+              All grants are logged in the entitlement history for audit purposes
+            </li>
+            <li>
+              Use presets for common scenarios or enter custom days and reasons
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      ${!paidLeaveType ? '<div class="alert alert-danger mt-4"><i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> "Paid Leave" type not found! Please create a leave type named "Paid Leave" first.</div>' : ''}
+    </div>
+  </div>
+</div>
+
+<script>
+// Preset buttons
+document.querySelectorAll('.preset-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.getElementById('days').value = this.dataset.days;
+    document.getElementById('reason').value = this.dataset.reason;
+    updatePreview();
+  });
+});
+
+// Grant to all toggle
+document.getElementById('grant_all').addEventListener('change', function() {
+  var empSelection = document.getElementById('employeeSelection');
+  if (this.checked) {
+    empSelection.style.opacity = '0.5';
+    empSelection.style.pointerEvents = 'none';
+  } else {
+    empSelection.style.opacity = '1';
+    empSelection.style.pointerEvents = 'auto';
+  }
+  updatePreview();
+});
+
+// Employee search
+document.getElementById('employeeSearch').addEventListener('input', function() {
+  var search = this.value.toLowerCase();
+  document.querySelectorAll('.employee-item').forEach(function(item) {
+    if (item.dataset.name.includes(search)) {
+      item.style.display = 'block';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+});
+
+// Select/Clear all
+document.getElementById('selectAll').addEventListener('click', function() {
+  document.querySelectorAll('.employee-checkbox:not(:checked)').forEach(function(cb) {
+    if (cb.closest('.employee-item').style.display !== 'none') {
+      cb.checked = true;
+    }
+  });
+  updatePreview();
+});
+
+document.getElementById('clearAll').addEventListener('click', function() {
+  document.querySelectorAll('.employee-checkbox:checked').forEach(function(cb) {
+    cb.checked = false;
+  });
+  updatePreview();
+});
+
+// Checkbox change
+document.querySelectorAll('.employee-checkbox').forEach(function(cb) {
+  cb.addEventListener('change', updatePreview);
+});
+
+// Days/reason change
+document.getElementById('days').addEventListener('input', updatePreview);
+document.getElementById('reason').addEventListener('input', updatePreview);
+
+function updatePreview() {
+  var days = parseFloat(document.getElementById('days').value) || 0;
+  var reason = document.getElementById('reason').value;
+  var grantAll = document.getElementById('grant_all').checked;
+  var selectedCount = grantAll ? ${employees.length} : document.querySelectorAll('.employee-checkbox:checked').length;
+
+  document.getElementById('selectedCount').textContent = document.querySelectorAll('.employee-checkbox:checked').length;
+  document.getElementById('previewDays').textContent = days;
+  document.getElementById('previewCount').textContent = selectedCount;
+  document.getElementById('previewReason').textContent = reason ? ' for "' + reason + '"' : '';
+
+  // Show/hide preview
+  var previewSection = document.getElementById('previewSection');
+  if (days > 0 && selectedCount > 0) {
+    previewSection.classList.remove('d-none');
+    document.getElementById('submitBtn').disabled = false;
+  } else {
+    previewSection.classList.add('d-none');
+    document.getElementById('submitBtn').disabled = true;
+  }
+}
+
+// Form validation
+document.getElementById('rewardForm').addEventListener('submit', function(e) {
+  var grantAll = document.getElementById('grant_all').checked;
+  var selectedCount = document.querySelectorAll('.employee-checkbox:checked').length;
+  var days = parseFloat(document.getElementById('days').value) || 0;
+
+  if (days <= 0) {
+    e.preventDefault();
+    alert('Please enter a valid number of days');
+    return false;
+  }
+
+  if (!grantAll && selectedCount === 0) {
+    e.preventDefault();
+    alert('Please select at least one employee');
+    return false;
+  }
+
+  var totalEmployees = grantAll ? ${employees.length} : selectedCount;
+  if (!confirm('Grant ' + days + ' Paid Leave day(s) to ' + totalEmployees + ' employee(s)?')) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// Initial preview
+updatePreview();
+</script>
+` }) %>

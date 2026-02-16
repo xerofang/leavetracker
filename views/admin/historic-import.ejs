@@ -122,12 +122,24 @@
 
 <script>
 // Set max date to yesterday for historic imports
-var today = new Date();
-var yesterday = new Date(today);
-yesterday.setDate(yesterday.getDate() - 1);
-var maxDate = yesterday.toISOString().split('T')[0];
-document.getElementById('start_date').setAttribute('max', maxDate);
-document.getElementById('end_date').setAttribute('max', maxDate);
+(function() {
+  var today = new Date();
+  var yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  var maxDate = yesterday.toISOString().split('T')[0];
+
+  var startInput = document.getElementById('start_date');
+  var endInput = document.getElementById('end_date');
+
+  startInput.max = maxDate;
+  endInput.max = maxDate;
+
+  // Set a reasonable min date (e.g., 5 years ago)
+  var minDate = new Date(today);
+  minDate.setFullYear(minDate.getFullYear() - 5);
+  startInput.min = minDate.toISOString().split('T')[0];
+  endInput.min = minDate.toISOString().split('T')[0];
+})();
 
 // Event listeners
 document.getElementById('employee_id').addEventListener('change', previewConsumption);
@@ -146,15 +158,28 @@ async function previewConsumption() {
   document.getElementById('submitBtn').disabled = true;
   document.getElementById('confirmCheckbox').checked = false;
 
+  // Check if all fields are filled with valid values
   if (!employeeId || !leaveTypeId || !startDate || !endDate) {
+    document.getElementById('previewPlaceholder').innerHTML = '<i class="bi bi-info-circle"></i> Select employee, leave type, and dates to see balance breakdown';
     document.getElementById('previewPlaceholder').classList.remove('d-none');
     document.getElementById('previewContent').classList.add('d-none');
     document.getElementById('previewLoading').classList.add('d-none');
     return;
   }
 
-  // Validate end date is after start date
-  if (new Date(endDate) < new Date(startDate)) {
+  // Validate dates are proper date strings (YYYY-MM-DD format)
+  var startDateObj = new Date(startDate);
+  var endDateObj = new Date(endDate);
+
+  if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+    document.getElementById('previewPlaceholder').innerHTML = '<i class="bi bi-info-circle"></i> Please enter valid dates';
+    document.getElementById('previewPlaceholder').classList.remove('d-none');
+    document.getElementById('previewContent').classList.add('d-none');
+    return;
+  }
+
+  // Validate end date is after or equal to start date
+  if (endDateObj < startDateObj) {
     document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> End date must be after start date</span>';
     document.getElementById('previewPlaceholder').classList.remove('d-none');
     document.getElementById('previewContent').classList.add('d-none');

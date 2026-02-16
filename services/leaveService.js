@@ -753,6 +753,7 @@ async function calculateSmartBalanceConsumption(employeeId, primaryLeaveTypeId, 
   const breakdown = [];
   let remainingDays = totalDays;
   let totalEntitled = 0;
+  let isFirstType = true;
 
   // Consume from each type in order
   for (const leaveType of sortedTypes) {
@@ -769,10 +770,23 @@ async function calculateSmartBalanceConsumption(employeeId, primaryLeaveTypeId, 
         leaveTypeName: leaveType.name,
         days: daysToConsume,
         isUnpaid: false,
-        available: available
+        available: available,
+        isPrimary: isFirstType
       });
       remainingDays -= daysToConsume;
+    } else if (isFirstType) {
+      // Always show primary type even if 0 balance (so user understands why cascade happened)
+      breakdown.push({
+        leaveTypeId: leaveType.id,
+        leaveTypeName: leaveType.name,
+        days: 0,
+        isUnpaid: false,
+        available: 0,
+        isPrimary: true,
+        noBalance: true
+      });
     }
+    isFirstType = false;
   }
 
   // Any remaining days are unpaid

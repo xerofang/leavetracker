@@ -208,8 +208,23 @@ async function previewConsumption() {
       tableBody.innerHTML = '';
       data.breakdown.forEach(function(item) {
         const row = document.createElement('tr');
-        row.className = item.isUnpaid ? 'table-danger' : '';
-        row.innerHTML = '<td>' + item.leaveTypeName + (item.isUnpaid ? ' <span class="badge bg-danger">Unpaid</span>' : '') + '</td>' +
+        // Style: danger for unpaid, warning for no balance primary type
+        if (item.isUnpaid) {
+          row.className = 'table-danger';
+        } else if (item.noBalance) {
+          row.className = 'table-warning';
+        }
+
+        var badge = '';
+        if (item.isUnpaid) {
+          badge = ' <span class="badge bg-danger">Unpaid</span>';
+        } else if (item.noBalance) {
+          badge = ' <span class="badge bg-warning text-dark">No Balance</span>';
+        } else if (item.isPrimary) {
+          badge = ' <span class="badge bg-primary">Primary</span>';
+        }
+
+        row.innerHTML = '<td>' + item.leaveTypeName + badge + '</td>' +
           '<td class="text-center">' + (item.isUnpaid ? '-' : item.available.toFixed(1)) + '</td>' +
           '<td class="text-center"><strong>' + item.days + '</strong></td>';
         tableBody.appendChild(row);

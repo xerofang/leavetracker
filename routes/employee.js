@@ -211,4 +211,122 @@ router.get('/api/check-balance', async (req, res) => {
   }
 });
 
+// API: Preview smart balance consumption (for employees)
+router.get('/api/preview-balance-consumption', async (req, res) => {
+  try {
+    const { leave_type_id, start_date, end_date } = req.query;
+
+    if (!leave_type_id || !start_date || !end_date) {
+      return res.status(400).json({ success: false, error: 'Missing required parameters' });
+    }
+
+    const year = new Date(start_date).getFullYear();
+    const totalDays = calculateWorkingDays(start_date, end_date);
+
+    if (totalDays <= 0) {
+      return res.json({
+        success: true,
+        breakdown: [],
+        hasOverflow: false,
+        unpaidDays: 0,
+        totalDays: 0,
+        message: 'No working days in selected range'
+      });
+    }
+
+    const consumption = await leaveService.calculateSmartBalanceConsumption(
+      req.session.user.id,
+      parseInt(leave_type_id),
+      totalDays,
+      year
+    );
+
+    // For Paid Leave standalone type, if insufficient balance, return error
+    if (consumption.insufficientBalance) {
+      return res.json({
+        success: false,
+        error: consumption.error,
+        insufficientBalance: true,
+        shortage: consumption.shortage,
+        ...consumption,
+        totalDays
+      });
+    }
+
+    res.json({
+      success: true,
+      ...consumption,
+      totalDays
+    });
+  } catch (error) {
+    console.error('Employee preview balance consumption error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /employee/apply-smart - Apply leave with smart consumption
+router.post('/apply-smart', async (req, res) => {
+  try {
+    const { leave_type_id, start_date, end_date, reason, confirmed_breakdown } = req.body;
+
+    if (!leave_type_id || !start_date || !end_date) {
+      req.flash('error', 'Please fill in all required fields');
+      return res.redirect('/employee/apply');
+    }
+
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+
+    if (startDate > endDate) {
+      req.flash('error', 'End date must be after start date');
+      return res.redirect('/employee/apply');
+    }
+
+    if (startDate < new Date().setHours(0, 0, 0, 0)) {
+      req.flash('error', 'Cannot apply for leave in the past');
+      return res.redirect('/employee/apply');
+    }
+
+    const totalDays = calculateWorkingDays(start_date, end_date);
+    if (totalDays === 0) {
+      req.flash('error', 'Selected dates only include weekends');
+      return res.redirect('/employee/apply');
+    }
+
+    const breakdown = JSON.parse(confirmed_breakdown);
+
+    // Create leave request with smart consumption
+    const request = await leaveService.createLeaveRequestWithSmartConsumption({
+      employeeId: req.session.user.id,
+      leaveTypeId: parseInt(leave_type_id),
+      startDate: start_date,
+      endDate: end_date,
+      totalDays,
+      reason,
+      requestedBy: req.session.user.id
+    }, breakdown);
+
+    // Send notifications
+    const leaveType = await LeaveType.findByPk(leave_type_id);
+    const employee = await Employee.findByPk(req.session.user.id);
+
+    notificationService.notifyNewLeaveRequest(request, employee, leaveType);
+
+    // Build message based on breakdown
+    const unpaidDays = breakdown.filter(b => b.isUnpaid).reduce((sum, b) => sum + b.days, 0);
+    let message = 'Leave request submitted successfully';
+    if (unpaidDays > 0) {
+      message += ` (includes ${unpaidDays} unpaid day${unpaidDays > 1 ? 's' : ''})`;
+    }
+
+    req.flash('success', message);
+    res.redirect('/employee/history');
+
+  } catch (error) {
+    console.error('Apply smart leave error:', error);
+    req.flash('error', error.message || 'Error submitting leave request');
+    res.redirect('/employee/apply');
+  }
+});
+
 module.exports = router;

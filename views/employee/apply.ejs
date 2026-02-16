@@ -1,53 +1,116 @@
 <%- include('../layouts/main', { body: `
 <div class="row justify-content-center">
-  <div class="col-lg-8">
+  <div class="col-lg-10">
     <div class="card shadow">
       <div class="card-header bg-primary text-white">
         <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Apply for Leave</h5>
+        <small>Smart balance consumption automatically allocates days across leave types</small>
       </div>
       <div class="card-body p-4">
         <form method="POST" action="/employee/apply" id="leaveForm">
-          <div class="row mb-3">
+          <div class="row">
+            <!-- Left Column - Form Fields -->
             <div class="col-md-6">
-              <label for="leave_type_id" class="form-label">Leave Type <span class="text-danger">*</span></label>
-              <select class="form-select" id="leave_type_id" name="leave_type_id" required>
-                <option value="">Select leave type</option>
-                ${leaveTypes.map(lt => `
-                  <option value="${lt.id}">${lt.name}</option>
-                `).join('')}
-              </select>
+              <div class="mb-3">
+                <label for="leave_type_id" class="form-label">Leave Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="leave_type_id" name="leave_type_id" required>
+                  <option value="">Select leave type</option>
+                  ${leaveTypes.map(lt => '<option value="' + lt.id + '">' + lt.name + '</option>').join('')}
+                </select>
+                <small class="text-muted">If balance is insufficient, days will be taken from other types automatically</small>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control" id="end_date" name="end_date" required>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label for="reason" class="form-label">Reason</label>
+                <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Enter reason for leave (optional)"></textarea>
+              </div>
             </div>
+
+            <!-- Right Column - Balance Preview -->
             <div class="col-md-6">
-              <label class="form-label">Available Balance</label>
-              <div id="balanceInfo" class="form-control bg-light">Select leave type</div>
+              <div class="card bg-light">
+                <div class="card-header">
+                  <strong><i class="bi bi-calculator"></i> Leave Consumption Preview</strong>
+                </div>
+                <div class="card-body">
+                  <div id="previewLoading" class="text-center text-muted d-none">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                    Calculating...
+                  </div>
+
+                  <div id="previewPlaceholder" class="text-muted">
+                    <i class="bi bi-info-circle"></i> Select leave type and dates to see balance breakdown
+                  </div>
+
+                  <div id="simpleBalance" class="d-none">
+                    <div class="mb-2">
+                      <strong>Working Days:</strong> <span id="workingDays" class="badge bg-primary">0</span>
+                    </div>
+                    <div class="mb-2">
+                      <strong>Available Balance:</strong> <span id="availableBalance" class="badge bg-success">0</span>
+                    </div>
+                    <div id="sufficientMsg" class="alert alert-success py-2 d-none">
+                      <i class="bi bi-check-circle"></i> Sufficient balance available
+                    </div>
+                  </div>
+
+                  <div id="smartConsumption" class="d-none">
+                    <div class="mb-2">
+                      <strong>Working Days:</strong> <span id="totalDaysDisplay" class="badge bg-primary">0</span>
+                    </div>
+
+                    <div class="alert alert-info py-2">
+                      <i class="bi bi-info-circle"></i> <strong>Smart Consumption:</strong> Days will be consumed from multiple leave types.
+                    </div>
+
+                    <table class="table table-sm table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Leave Type</th>
+                          <th class="text-center">Available</th>
+                          <th class="text-center">To Use</th>
+                        </tr>
+                      </thead>
+                      <tbody id="breakdownTable">
+                      </tbody>
+                    </table>
+
+                    <!-- Unpaid Warning -->
+                    <div id="unpaidWarning" class="alert alert-warning d-none">
+                      <i class="bi bi-exclamation-triangle"></i>
+                      <strong>Unpaid Leave Notice:</strong> <span id="unpaidDaysDisplay">0</span> day(s) will be marked as unpaid.
+                      <hr class="my-2">
+                      <small><i class="bi bi-cash-coin"></i> <strong>Salary deduction may be incurred</strong> on your next salary cycle for unpaid leave days.</small>
+                    </div>
+
+                    <!-- Smart Consumption Confirmation -->
+                    <div class="form-check mt-3">
+                      <input class="form-check-input" type="checkbox" id="confirmSmart">
+                      <label class="form-check-label" for="confirmSmart">
+                        I understand and confirm this leave consumption breakdown
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" id="start_date" name="start_date" required>
-            </div>
-            <div class="col-md-6">
-              <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" id="end_date" name="end_date" required>
-            </div>
-          </div>
+          <!-- Hidden fields -->
+          <input type="hidden" id="confirmed_breakdown" name="confirmed_breakdown" value="">
 
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label class="form-label">Working Days</label>
-              <div id="workingDays" class="form-control bg-light">0 days</div>
-            </div>
-            <div class="col-md-6">
-              <div id="balanceCheck" class="mt-4"></div>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label for="reason" class="form-label">Reason</label>
-            <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Enter reason for leave (optional)"></textarea>
-          </div>
+          <hr class="my-4">
 
           <div class="d-grid gap-2 d-md-flex justify-content-md-end">
             <a href="/employee/dashboard" class="btn btn-outline-secondary">Cancel</a>
@@ -59,66 +122,254 @@
       </div>
     </div>
 
+    <!-- Leave Balances Card -->
     <div class="card mt-4 shadow-sm">
       <div class="card-header">
-        <h6 class="mb-0"><i class="bi bi-info-circle"></i> Your Leave Balances</h6>
+        <h6 class="mb-0"><i class="bi bi-wallet2"></i> Your Leave Balances</h6>
       </div>
       <div class="card-body">
-        <div class="row">
-          ${balances.map(b => `
-            <div class="col-md-4">
-              <div class="d-flex justify-content-between">
-                <span>${b.leaveType.name}:</span>
-                <strong>${b.available.toFixed(1)} days</strong>
-              </div>
-            </div>
-          `).join('')}
+        <div class="row g-3">
+          ${balances.map(function(b) {
+            var isPaidLeave = b.leaveType.name === 'Paid Leave';
+            var isUnpaidLeave = b.leaveType.name === 'Unpaid Leave';
+
+            if (isPaidLeave) {
+              return '<div class="col-md-4"><div class="balance-card paid-leave-card p-3 rounded text-center">' +
+                '<div class="balance-icon"><i class="bi bi-star-fill"></i></div>' +
+                '<div class="balance-name">' + b.leaveType.name + '</div>' +
+                '<div class="balance-value">' + b.available.toFixed(1) + ' days</div>' +
+                '<small class="text-muted">Reward Entitlement</small>' +
+              '</div></div>';
+            } else if (isUnpaidLeave) {
+              return '<div class="col-md-4"><div class="balance-card unpaid-leave-card p-3 rounded text-center">' +
+                '<div class="balance-icon"><i class="bi bi-cash-stack"></i></div>' +
+                '<div class="balance-name">' + b.leaveType.name + '</div>' +
+                '<div class="balance-value">' + b.used_days.toFixed(1) + ' taken</div>' +
+                '<small class="text-muted">Unlimited (affects salary)</small>' +
+              '</div></div>';
+            } else {
+              return '<div class="col-md-4"><div class="balance-card p-3 rounded text-center">' +
+                '<div class="balance-name">' + b.leaveType.name + '</div>' +
+                '<div class="balance-value">' + b.available.toFixed(1) + ' days</div>' +
+                '<small class="text-muted">of ' + b.entitled_days.toFixed(1) + ' entitled</small>' +
+              '</div></div>';
+            }
+          }).join('')}
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<script>
-const balances = ${JSON.stringify(balances.map(b => ({ id: b.leaveType.id, name: b.leaveType.name, available: b.available })))};
-
-document.getElementById('leave_type_id').addEventListener('change', updateBalance);
-document.getElementById('start_date').addEventListener('change', calculateDays);
-document.getElementById('end_date').addEventListener('change', calculateDays);
-
-function updateBalance() {
-  const leaveTypeId = document.getElementById('leave_type_id').value;
-  const balance = balances.find(b => b.id == leaveTypeId);
-  document.getElementById('balanceInfo').textContent = balance ? balance.available.toFixed(1) + ' days available' : 'Select leave type';
-  calculateDays();
+<style>
+.balance-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s;
 }
+.balance-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.balance-name {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 5px;
+}
+.balance-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #212529;
+}
+.paid-leave-card {
+  background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+  border: 2px solid #ffc107;
+  position: relative;
+  overflow: hidden;
+}
+.paid-leave-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,193,7,0.3), transparent);
+  animation: shine 3s infinite;
+}
+@keyframes shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+.paid-leave-card .balance-icon {
+  color: #ffc107;
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+  animation: pulse-gold 2s infinite;
+}
+@keyframes pulse-gold {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+.paid-leave-card .balance-value {
+  color: #856404;
+}
+.unpaid-leave-card {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e9ecef 100%);
+  border: 1px dashed #6c757d;
+}
+.unpaid-leave-card .balance-icon {
+  color: #6c757d;
+  font-size: 1.2rem;
+  margin-bottom: 5px;
+}
+.unpaid-leave-card .balance-value {
+  color: #495057;
+}
+</style>
 
-async function calculateDays() {
-  const start = document.getElementById('start_date').value;
-  const end = document.getElementById('end_date').value;
-  const leaveTypeId = document.getElementById('leave_type_id').value;
+<script>
+document.getElementById('leave_type_id').addEventListener('change', previewConsumption);
+document.getElementById('start_date').addEventListener('change', previewConsumption);
+document.getElementById('end_date').addEventListener('change', previewConsumption);
+document.getElementById('confirmSmart').addEventListener('change', updateSubmitButton);
 
-  if (start && end) {
-    const response = await fetch('/employee/api/calculate-days?start=' + start + '&end=' + end);
-    const data = await response.json();
-    document.getElementById('workingDays').textContent = data.days + ' working day' + (data.days !== 1 ? 's' : '');
+var currentMode = 'simple';
 
-    if (leaveTypeId && data.days > 0) {
-      const balance = balances.find(b => b.id == leaveTypeId);
-      if (balance) {
-        const balanceCheck = document.getElementById('balanceCheck');
-        const submitBtn = document.getElementById('submitBtn');
+async function previewConsumption() {
+  var leaveTypeId = document.getElementById('leave_type_id').value;
+  var startDate = document.getElementById('start_date').value;
+  var endDate = document.getElementById('end_date').value;
 
-        if (data.days <= balance.available) {
-          balanceCheck.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Sufficient balance</span>';
-          submitBtn.disabled = false;
-        } else {
-          balanceCheck.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Insufficient balance (need ' + (data.days - balance.available).toFixed(1) + ' more days)</span>';
-          submitBtn.disabled = true;
-        }
-      }
+  document.getElementById('confirmSmart').checked = false;
+  document.getElementById('confirmed_breakdown').value = '';
+  currentMode = 'simple';
+
+  if (!leaveTypeId || !startDate || !endDate) {
+    showPlaceholder();
+    return;
+  }
+
+  if (new Date(endDate) < new Date(startDate)) {
+    document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> End date must be after start date</span>';
+    document.getElementById('previewPlaceholder').classList.remove('d-none');
+    document.getElementById('simpleBalance').classList.add('d-none');
+    document.getElementById('smartConsumption').classList.add('d-none');
+    document.getElementById('submitBtn').disabled = true;
+    return;
+  }
+
+  document.getElementById('previewPlaceholder').classList.add('d-none');
+  document.getElementById('previewLoading').classList.remove('d-none');
+  document.getElementById('simpleBalance').classList.add('d-none');
+  document.getElementById('smartConsumption').classList.add('d-none');
+
+  try {
+    var response = await fetch('/employee/api/preview-balance-consumption?leave_type_id=' + leaveTypeId + '&start_date=' + startDate + '&end_date=' + endDate);
+    var data = await response.json();
+
+    document.getElementById('previewLoading').classList.add('d-none');
+
+    if (!data.success) {
+      document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> ' + data.error + '</span>';
+      document.getElementById('previewPlaceholder').classList.remove('d-none');
+      document.getElementById('submitBtn').disabled = true;
+      return;
     }
+
+    if (data.totalDays === 0) {
+      document.getElementById('previewPlaceholder').innerHTML = '<span class="text-warning"><i class="bi bi-info-circle"></i> No working days in selected range</span>';
+      document.getElementById('previewPlaceholder').classList.remove('d-none');
+      document.getElementById('submitBtn').disabled = true;
+      return;
+    }
+
+    var primaryItem = data.breakdown[0];
+    var isSingleType = data.breakdown.length === 1 && !primaryItem.isUnpaid;
+
+    if (isSingleType) {
+      currentMode = 'simple';
+      document.getElementById('simpleBalance').classList.remove('d-none');
+      document.getElementById('smartConsumption').classList.add('d-none');
+      document.getElementById('workingDays').textContent = data.totalDays + ' day' + (data.totalDays !== 1 ? 's' : '');
+      document.getElementById('availableBalance').textContent = primaryItem.available.toFixed(1) + ' days';
+      document.getElementById('sufficientMsg').classList.remove('d-none');
+      document.getElementById('leaveForm').action = '/employee/apply';
+      document.getElementById('submitBtn').disabled = false;
+    } else {
+      currentMode = 'smart';
+      document.getElementById('simpleBalance').classList.add('d-none');
+      document.getElementById('smartConsumption').classList.remove('d-none');
+      document.getElementById('totalDaysDisplay').textContent = data.totalDays + ' day' + (data.totalDays !== 1 ? 's' : '');
+
+      var tableBody = document.getElementById('breakdownTable');
+      tableBody.innerHTML = '';
+      data.breakdown.forEach(function(item) {
+        var row = document.createElement('tr');
+        if (item.isUnpaid) {
+          row.className = 'table-warning';
+        } else if (item.noBalance) {
+          row.className = 'table-secondary';
+        }
+
+        var badge = '';
+        if (item.isUnpaid) {
+          badge = ' <span class="badge bg-warning text-dark">Unpaid</span>';
+        } else if (item.noBalance) {
+          badge = ' <span class="badge bg-secondary">No Balance</span>';
+        } else if (item.isPrimary) {
+          badge = ' <span class="badge bg-primary">Primary</span>';
+        }
+
+        row.innerHTML = '<td>' + item.leaveTypeName + badge + '</td>' +
+          '<td class="text-center">' + (item.isUnpaid ? '<i class="bi bi-infinity"></i>' : item.available.toFixed(1)) + '</td>' +
+          '<td class="text-center"><strong>' + item.days + '</strong></td>';
+        tableBody.appendChild(row);
+      });
+
+      if (data.unpaidDays > 0) {
+        document.getElementById('unpaidWarning').classList.remove('d-none');
+        document.getElementById('unpaidDaysDisplay').textContent = data.unpaidDays;
+      } else {
+        document.getElementById('unpaidWarning').classList.add('d-none');
+      }
+
+      document.getElementById('confirmed_breakdown').value = JSON.stringify(data.breakdown);
+      document.getElementById('leaveForm').action = '/employee/apply-smart';
+      document.getElementById('submitBtn').disabled = true;
+    }
+
+  } catch (error) {
+    console.error('Preview error:', error);
+    document.getElementById('previewLoading').classList.add('d-none');
+    document.getElementById('previewPlaceholder').innerHTML = '<span class="text-danger">Error loading preview</span>';
+    document.getElementById('previewPlaceholder').classList.remove('d-none');
   }
 }
+
+function showPlaceholder() {
+  document.getElementById('previewPlaceholder').innerHTML = '<i class="bi bi-info-circle"></i> Select leave type and dates to see balance breakdown';
+  document.getElementById('previewPlaceholder').classList.remove('d-none');
+  document.getElementById('previewLoading').classList.add('d-none');
+  document.getElementById('simpleBalance').classList.add('d-none');
+  document.getElementById('smartConsumption').classList.add('d-none');
+  document.getElementById('submitBtn').disabled = false;
+}
+
+function updateSubmitButton() {
+  if (currentMode === 'smart') {
+    document.getElementById('submitBtn').disabled = !document.getElementById('confirmSmart').checked;
+  } else {
+    document.getElementById('submitBtn').disabled = false;
+  }
+}
+
+document.getElementById('leaveForm').addEventListener('submit', function(e) {
+  if (currentMode === 'smart' && !document.getElementById('confirmSmart').checked) {
+    e.preventDefault();
+    alert('Please confirm the leave consumption breakdown before submitting.');
+    return false;
+  }
+});
 </script>
 ` }) %>

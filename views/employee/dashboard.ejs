@@ -1,4 +1,61 @@
 <%- include('../layouts/main', { body: `
+<style>
+  /* Paid Leave Golden Glow Animation */
+  .paid-leave-card {
+    background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+    border: 2px solid #ffc107 !important;
+    position: relative;
+    overflow: hidden;
+  }
+  .paid-leave-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.3), transparent);
+    animation: shine 3s infinite;
+  }
+  @keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(200%) rotate(45deg); }
+  }
+  .paid-leave-card .card-body {
+    position: relative;
+    z-index: 1;
+  }
+  .paid-leave-badge {
+    background: linear-gradient(135deg, #ffc107 0%, #ffdb4d 100%);
+    color: #856404;
+    font-weight: 600;
+    animation: pulse-gold 2s infinite;
+  }
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); }
+    50% { box-shadow: 0 0 15px rgba(255, 193, 7, 0.8); }
+  }
+  .reward-icon {
+    color: #ffc107;
+    font-size: 1.5rem;
+    animation: bounce 2s infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  /* Unpaid Leave Styling */
+  .unpaid-leave-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px dashed #6c757d !important;
+  }
+  .unpaid-badge {
+    background-color: #6c757d;
+    color: white;
+  }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
   <a href="/employee/apply" class="btn btn-primary">
@@ -10,30 +67,96 @@
   <div class="col-12">
     <h5 class="text-muted mb-3">Leave Balances - ${year}</h5>
   </div>
-  ${balances.map(b => `
-    <div class="col-md-4 mb-3">
-      <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="text-muted mb-1">${b.leaveType.name}</h6>
-              <h3 class="mb-0">${b.available.toFixed(1)} <small class="text-muted fs-6">days</small></h3>
+  ${balances.map(b => {
+    const isPaidLeave = b.leaveType.name === 'Paid Leave';
+    const isUnpaidLeave = b.leaveType.name === 'Unpaid Leave';
+    const cardClass = isPaidLeave ? 'paid-leave-card' : (isUnpaidLeave ? 'unpaid-leave-card' : '');
+
+    if (isUnpaidLeave) {
+      // Unpaid Leave: Show only "taken" days
+      return `
+        <div class="col-md-4 mb-3">
+          <div class="card h-100 border-0 shadow-sm ${cardClass}">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="text-muted mb-1">
+                    <i class="bi bi-calendar-x text-secondary"></i> ${b.leaveType.name}
+                  </h6>
+                  <h3 class="mb-0 text-secondary">${parseFloat(b.balance.used_days).toFixed(1)} <small class="text-muted fs-6">taken</small></h3>
+                </div>
+                <div class="text-end">
+                  <span class="badge unpaid-badge">Flexible</span>
+                  <br>
+                  <small class="text-muted mt-2 d-block">No salary for these days</small>
+                </div>
+              </div>
+              ${parseFloat(b.balance.pending_days) > 0 ? `
+                <div class="mt-2">
+                  <span class="badge bg-warning text-dark">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>
+                </div>
+              ` : ''}
             </div>
-            <div class="text-end">
-              <span class="badge bg-light text-dark">Entitled: ${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
-              <br>
-              <span class="badge bg-success mt-1">Used: ${parseFloat(b.balance.used_days).toFixed(1)}</span>
-              ${parseFloat(b.balance.pending_days) > 0 ? `<br><span class="badge bg-warning text-dark mt-1">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>` : ''}
-            </div>
-          </div>
-          <div class="progress mt-3" style="height: 6px;">
-            <div class="progress-bar bg-success" style="width: ${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
-            <div class="progress-bar bg-warning" style="width: ${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
           </div>
         </div>
-      </div>
-    </div>
-  `).join('')}
+      `;
+    } else if (isPaidLeave) {
+      // Paid Leave: Golden glow with reward styling
+      return `
+        <div class="col-md-4 mb-3">
+          <div class="card h-100 border-0 shadow-sm ${cardClass}">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="mb-1">
+                    <i class="bi bi-star-fill reward-icon"></i>
+                    <span class="text-warning fw-bold">${b.leaveType.name}</span>
+                  </h6>
+                  <h3 class="mb-0 text-warning">${b.available.toFixed(1)} <small class="fs-6">days available</small></h3>
+                </div>
+                <div class="text-end">
+                  <span class="badge paid-leave-badge"><i class="bi bi-gift"></i> Reward: ${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
+                  <br>
+                  <span class="badge bg-success mt-1">Used: ${parseFloat(b.balance.used_days).toFixed(1)}</span>
+                  ${parseFloat(b.balance.pending_days) > 0 ? `<br><span class="badge bg-warning text-dark mt-1">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>` : ''}
+                </div>
+              </div>
+              <div class="progress mt-3" style="height: 6px; background-color: rgba(255, 193, 7, 0.2);">
+                <div class="progress-bar" style="width: ${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%; background-color: #28a745;"></div>
+                <div class="progress-bar" style="width: ${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%; background-color: #ffc107;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      // Regular leave types
+      return `
+        <div class="col-md-4 mb-3">
+          <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="text-muted mb-1">${b.leaveType.name}</h6>
+                  <h3 class="mb-0">${b.available.toFixed(1)} <small class="text-muted fs-6">days</small></h3>
+                </div>
+                <div class="text-end">
+                  <span class="badge bg-light text-dark">Entitled: ${parseFloat(b.balance.entitled_days).toFixed(1)}</span>
+                  <br>
+                  <span class="badge bg-success mt-1">Used: ${parseFloat(b.balance.used_days).toFixed(1)}</span>
+                  ${parseFloat(b.balance.pending_days) > 0 ? `<br><span class="badge bg-warning text-dark mt-1">Pending: ${parseFloat(b.balance.pending_days).toFixed(1)}</span>` : ''}
+                </div>
+              </div>
+              <div class="progress mt-3" style="height: 6px;">
+                <div class="progress-bar bg-success" style="width: ${(parseFloat(b.balance.used_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
+                <div class="progress-bar bg-warning" style="width: ${(parseFloat(b.balance.pending_days) / parseFloat(b.balance.entitled_days) * 100) || 0}%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }).join('')}
 </div>
 
 <div class="card shadow-sm">
